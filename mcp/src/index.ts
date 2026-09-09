@@ -128,7 +128,10 @@ function createServer() {
       inputSchema: z.object({
         clientName: z.string().min(1).max(120),
         clientContact: z.string().max(200).optional(),
-        amount: z.number().positive(),
+        amount: z.union([
+          z.number().positive(),
+          z.string().regex(/^\d+(\.\d{1,6})?$/),
+        ]),
         tokenSymbol: z.enum(['USDT', 'USDC', 'USDm', 'NGNm']),
         description: z.string().min(1).max(500),
         dueDate: z.string().optional(),
@@ -146,13 +149,13 @@ function createServer() {
         const result = await backendFetch('/api/invoices', {
           method: 'POST',
           body: JSON.stringify({
-            merchantId: MERCHANT_ID,
+            merchantId: MERCHANT_ID_VALUE,
             clientName,
-            clientContact: clientContact || null,
-            amount,
+            clientContact: clientContact || undefined,
+            amount: String(amount),
             tokenSymbol,
             description,
-            dueDate: dueDate || null,
+            dueDate: dueDate || undefined,
           }),
         });
 
@@ -167,7 +170,7 @@ function createServer() {
                 publicUrl: result.publicUrl,
                 status: result.status,
                 clientName,
-                amount,
+                amount: String(amount),
                 tokenSymbol,
                 description,
                 dueDate: dueDate || null,
@@ -408,6 +411,7 @@ const app = createMcpExpressApp({
   ],
 });
 
+
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
@@ -419,7 +423,9 @@ app.get('/health', (_req, res) => {
 
 const nodeHandler = toNodeHandler(handler);
 
-app.all('/mcp', authenticateBearer, nodeHandler);
+app.all('/mcp', authenticateBearer, (req, res) => {
+  nodeHandler(req, res, req.body);
+});
 
 app.listen(PORT, '127.0.0.1', () => {
   console.log(`CeloDesk MCP listening on 127.0.0.1:${PORT}`);
