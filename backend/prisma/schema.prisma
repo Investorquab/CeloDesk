@@ -1,0 +1,142 @@
+// quabagent — canonical database schema
+// See docs/DATABASE.md for field-by-field rationale.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  OVERPAID
+  FAILED
+  CANCELLED
+  EXPIRED
+  OVERDUE
+}
+
+enum PaymentStatus {
+  DETECTED
+  VERIFYING
+  VERIFIED
+  REJECTED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  telegramId    String?   @unique
+  email         String?   @unique
+  walletAddress String    @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile       Profile?
+  invoices      Invoice[]
+}
+
+model Profile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+
+  businessName    String
+  slug            String   @unique
+  tagline         String?
+  logoUrl         String?
+  description     String?
+  websiteUrl      String?
+  socialLinks     Json?    // { twitter, instagram, ... }
+
+  preferredToken  String   @default("USDm") // symbol, see src/celo/tokens.ts
+  acceptedTokens  String[] @default(["USDm", "USDC"])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  publicSlug      String        @unique @default(cuid())
+
+  merchantId      String
+  merchant        User          @relation(fields: [merchantId], references: [id])
+
+  clientName      String
+  clientContact   String?
+
+  amount          Decimal       @db.Decimal(18, 6)
+  tokenSymbol     String        // e.g. "USDm", "USDC" — see src/celo/tokens.ts
+  tokenAddress    String        // resolved ERC20 contract address at creation time
+  chainId         Int           @default(42220) // Celo mainnet
+
+  receivingWallet String        // merchant's wallet at time of invoice creation
+
+  description     String?
+  dueDate         DateTime?
+
+  status          InvoiceStatus @default(DRAFT)
+
+  attributionTag  String        @default("celo_5ad8f72f8a99")
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  expiresAt       DateTime?
+
+  payments        Payment[]
+
+  @@index([merchantId, status])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  invoiceId         String
+  invoice           Invoice       @relation(fields: [invoiceId], references: [id])
+
+  txHash            String        @unique
+  chainId           Int
+  fromAddress       String
+  toAddress         String
+  tokenAddress      String
+  amount            Decimal       @db.Decimal(18, 6)
+
+  status            PaymentStatus @default(DETECTED)
+  confirmations     Int           @default(0)
+  blockNumber       Int?
+
+  rejectionReason   String?       // populated when status = REJECTED
+
+  detectedAt        DateTime      @default(now())
+  verifiedAt         DateTime?
+
+  events            PaymentEvent[]
+
+  @@index([invoiceId])
+}
+
+model PaymentEvent {
+  id          String   @id @default(cuid())
+  paymentId   String
+  payment     Payment  @relation(fields: [paymentId], references: [id])
+
+  eventType   String   // e.g. "DETECTED", "CONFIRMATION", "VERIFIED", "REJECTED"
+  detail      Json?
+  createdAt   DateTime @default(now())
+}
+
+
+
+model Reminder {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  sentAt      DateTime @default(now())
+  channel     String   // "telegram" | "email"
+}

@@ -1,0 +1,13 @@
+{
+  "type": "Agent",
+  "name": "CeloDesk",
+  "description": "Telegram-based stablecoin payments agent on Celo, built for the Agents at Work Hackathon (Real World Adoption track).",
+  "endpoints": [
+    {
+      "type": "wallet",
+      "address": "0x00d1E86040d88397F4eB187c38dC527F6659e486",
+      "chainId": 42220
+    }
+  ],
+  "supportedTrust": ["reputation"]
+}

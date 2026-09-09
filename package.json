@@ -1,0 +1,14 @@
+{
+  "name": "celodesk",
+  "version": "0.1.0",
+  "description": "CeloDesk \u2014 AI-powered stablecoin payments on Celo.",
+  "main": "register.js",
+  "scripts": {
+    "register": "node register.js"
+  },
+  "dependencies": {
+    "@chaoschain/sdk": "latest",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0"
+  }
+}

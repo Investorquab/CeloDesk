@@ -1,0 +1,34 @@
+import React from 'react';
+type P={size?:number;stroke?:number;style?:React.CSSProperties;className?:string;};
+const I=({children,size=20,stroke=1.8}:{children:React.ReactNode}&P)=> <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
+export const ArrowRight=(p:P)=><I {...p}><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></I>;
+export const ArrowLeft=(p:P)=><I {...p}><path d="m15 18-6-6 6-6"/></I>;
+export const Plus=(p:P)=><I {...p}><path d="M12 5v14M5 12h14"/></I>;
+export const Receipt=(p:P)=><I {...p}><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/></I>;
+export const Wallet=(p:P)=><I {...p}><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H19v14H6.5A2.5 2.5 0 0 1 4 16.5v-9Z"/><path d="M4 8h15"/><path d="M15 12h4"/></I>;
+export const Share=(p:P)=><I {...p}><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><path d="m8 11 8-5M8 13l8 5"/></I>;
+export const Qr=(p:P)=><I {...p}><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2M18 14h2M14 18h2M18 18h2"/></I>;
+export const Check=(p:P)=><I {...p}><path d="m5 12 4 4L19 6"/></I>;
+export const Clock=(p:P)=><I {...p}><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></I>;
+export const Alert=(p:P)=><I {...p}><path d="M12 4 21 20H3L12 4Z"/><path d="M12 9v5M12 17h.01"/></I>;
+export const Copy=(p:P)=><I {...p}><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></I>;
+export const Download=(p:P)=><I {...p}><path d="M12 4v11M8 11l4 4 4-4M5 20h14"/></I>;
+export const Home=(p:P)=><I {...p}><path d="m4 11 8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-8Z"/></I>;
+export const User=(p:P)=><I {...p}><circle cx="12" cy="8" r="3"/><path d="M5 20a7 7 0 0 1 14 0"/></I>;
+export const Activity=(p:P)=><I {...p}><path d="M4 12h3l2-5 4 10 2-5h5"/></I>;
+export const Settings=(p:P)=><I {...p}><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M4 12H3M21 12h-1M12 4V3M12 21v-1M5.6 5.6 4.9 4.9M19.1 19.1l-.7-.7M18.4 5.6l.7-.7M4.9 19.1l.7-.7"/></I>;
+export const Spark=(p:P)=><I {...p}><path d="m12 3 1.3 5.7L19 10l-5.7 1.3L12 17l-1.3-5.7L5 10l5.7-1.3L12 3Z"/></I>;
+export const LinkIcon=(p:P)=><I {...p}><path d="M10 13.5 14 10M7.5 16H6a3 3 0 0 1 0-6h3M16.5 8H18a3 3 0 0 1 0 6h-3"/></I>;
+export const LogOut=(p:P)=><I {...p}><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 19V5a2 2 0 0 0-2-2h-6"/></I>;
+export const MessageCircle=(p:P)=><I {...p}><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.7 8.7 0 0 1-3.4-.7L4 20l1.7-4.1A7.3 7.3 0 0 1 4.5 12 7.5 7.5 0 1 1 20 11.5Z"/></I>;
+export const ChevronDown=(p:P)=><I {...p}><path d="m6 9 6 6 6-6"/></I>;
+export const Search=(p:P)=><I {...p}><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></I>;
+export const WhatsApp=(p:P)=><I {...p} stroke={0}><path fill="currentColor" d="M12 2.4a9.6 9.6 0 0 0-8.3 14.4L2.5 21.5l4.9-1.2A9.6 9.6 0 1 0 12 2.4Zm0 17.3a7.7 7.7 0 0 1-3.9-1.1l-.3-.2-2.9.7.8-2.8-.2-.3A7.6 7.6 0 1 1 12 19.7Zm4.2-5.7c-.2-.1-1.2-.6-1.4-.7-.2-.1-.3-.1-.5.1l-.7.9c-.1.1-.2.2-.4.1-1.1-.5-1.9-1-2.7-1.8-.6-.6-1-1.3-1.4-2-.1-.2 0-.3.1-.4l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.3 0-.4l-.6-1.5c-.2-.4-.3-.4-.5-.4h-.4c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.3c.1.2 1.6 2.6 3.9 3.7 2.3 1.1 2.3.7 2.7.7.4 0 1.2-.5 1.3-1 .2-.5.2-.9.1-1Z"/></I>;
+export const Telegram=(p:P)=><I {...p} stroke={0}><path fill="currentColor" d="M21.2 4.3 18 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L5.4 13.5.5 12c-1.1-.3-1.1-1.1.2-1.6L19.8 3c.9-.3 1.7.2 1.4 1.3Z"/></I>;
+export const XIcon=(p:P)=><I {...p} stroke={2}><path d="m5 4 14 16M19 4 5 20"/></I>;
+export const Gmail=(p:P)=><I {...p} stroke={0}><path fill="currentColor" d="M3.2 5.1A2.2 2.2 0 0 1 6.8 3.4L12 7.2l5.2-3.8a2.2 2.2 0 0 1 3.6 1.7v12.7a1.8 1.8 0 0 1-1.8 1.8h-1.8V8.3L12 12.4 6.8 8.3v11.3H5a1.8 1.8 0 0 1-1.8-1.8V5.1Z"/></I>;
+export const Facebook=(p:P)=><I {...p} stroke={0}><path fill="currentColor" d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.6 1.7-1.6h1.8V3.8c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.2V10H7.5v3h2.8v8h3.2Z"/></I>;
+
+export const Trash=(p:P)=><I {...p}><path d="M4 7h16M10 11v6M14 11v6M9 7l1-3h4l1 3M6 7l1 14h10l1-14"/></I>;
+
+export const MoreVertical=(p:P)=><I {...p}><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></I>;
