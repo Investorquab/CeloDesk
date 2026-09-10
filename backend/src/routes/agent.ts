@@ -18,18 +18,18 @@ const tools = [
     type: 'function',
     function: {
       name: 'create_invoice',
-      description: 'Create a CeloDesk payment invoice for the authenticated merchant. Use this when the merchant explicitly asks to create an invoice. Never create an invoice without a client name and amount. If token is omitted, use the merchant preferred token or USDm.',
+      description: 'Create a CeloDesk payment invoice for the authenticated merchant. Use this when the merchant explicitly asks to create an invoice AND the payment token is known. Never create an invoice without a client name, amount, and explicit token. If the amount is described only as dollars/$/USD and no token is named, ask which supported token the merchant wants: USDm, USDC, or USDT. Do not silently choose a default token for an ambiguous dollar amount.',
       parameters: {
         type: 'object',
         properties: {
           clientName: { type: 'string', description: 'Name of the person or business being billed.' },
           amount: { type: 'string', description: 'Invoice amount as a decimal string, e.g. 405 or 150.50.' },
-          tokenSymbol: { type: 'string', enum: ['USDm', 'USDC', 'USDT', 'NGNm'], description: 'Payment token. If omitted, use the merchant preferred token or USDm.' },
+          tokenSymbol: { type: 'string', enum: ['USDm', 'USDC', 'USDT', 'NGNm'], description: 'Payment token. Must be explicitly known before creating an invoice.' },
           description: { type: 'string', description: 'What the invoice is for.' },
           clientContact: { type: 'string', description: 'Optional client email or contact.' },
           dueDate: { type: 'string', description: 'Optional ISO due date.' },
         },
-        required: ['clientName', 'amount'],
+        required: ['clientName', 'amount', 'tokenSymbol'],
         additionalProperties: false,
       },
     },
@@ -49,10 +49,7 @@ const tools = [
       description: 'Get an invoice and its payment records. Use invoiceId when known, or clientName to find the most recent invoice for a named client.',
       parameters: {
         type: 'object',
-        properties: {
-          invoiceId: { type: 'string' },
-          clientName: { type: 'string' },
-        },
+        properties: { invoiceId: { type: 'string' }, clientName: { type: 'string' } },
         additionalProperties: false,
       },
     },
@@ -143,8 +140,8 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
       const amount = String(args.amount ?? '').trim();
       if (!clientName || !amount || !/^\d+(?:\.\d+)?$/.test(amount) || Number(amount) <= 0) throw new Error('A valid positive invoice amount and client name are required.');
       const merchant = await getMerchant(merchantId);
-      const preferred = normalizeToken(merchant.profile?.preferredToken) || 'USDm';
-      const tokenSymbol = normalizeToken(args.tokenSymbol) || preferred;
+      const tokenSymbol = normalizeToken(args.tokenSymbol);
+      if (!tokenSymbol || !['USDm', 'USDC', 'USDT', 'NGNm'].includes(tokenSymbol)) throw new Error('Please choose a supported payment token before creating the invoice.');
       const invoice = await createInvoice({
         merchantId,
         clientName,
@@ -196,11 +193,11 @@ const SYSTEM = `You are CeloDesk AI, a concise business payment assistant for th
 Rules:
 - Use tools for any question about the merchant's actual invoices, payments, profile, balances or activity. Never invent financial data.
 - Use create_invoice only when the user explicitly asks to create an invoice. Do not create one merely because they are discussing an invoice.
-- A missing token is okay: the create_invoice tool will use the merchant preferred token or USDm.
-- Understand normal token names including USDT, USD₮, Tether, USDC, USDm, Mento Dollar, NGNm and Mento Naira.
+- Never create an invoice until a payment token is explicitly known. If the user gives an amount in dollars, $, or USD but does not name a specific token, ask which token they want: USDm, USDC, or USDT. Do not infer USDm from a dollar amount. NGNm should only be used when explicitly selected/named.
+- Understand normal token names including USDT, USD₮, Tether, Tether USD, USDC, USD Coin, USDm, Mento Dollar, Mento USD, NGNm, Mento Naira and Mento Nigerian Naira.
 - Never claim an invoice is paid unless backend data says PAID or OVERPAID.
 - Never move funds, sign transactions, or ask for a private key.
-- If required information is missing for creation, ask only for the missing information.
+- If required information is missing for creation, ask only for the missing information, one focused question at a time when practical.
 - Keep answers short and useful. When a tool returns invoice rows, summarize the important details and let the UI render interactive rows.
 - For 'who still owes me?' call list_outstanding_invoices.
 - For 'how much am I owed?' call get_payment_summary; do not add different token balances together as if they were the same currency.
@@ -239,15 +236,12 @@ router.post('/', requireAuth, async (req: AuthedRequest, res) => {
       if (!message) throw new Error('Groq returned an empty response.');
       messages.push(message);
       const calls = message.tool_calls ?? [];
-      if (!calls.length) {
-        return res.json({ reply: message.content || 'I completed the request.', artifacts });
-      }
+      if (!calls.length) return res.json({ reply: message.content || 'I completed the request.', artifacts });
       for (const call of calls) {
         let args: any = {};
         try { args = JSON.parse(call.function.arguments || '{}'); } catch { throw new Error(`Invalid arguments returned for ${call.function.name}.`); }
         let result: any;
-        try { result = await executeTool(call.function.name, args, req.merchantId!); }
-        catch (err: any) { result = { error: err?.message || 'Tool execution failed.' }; }
+        try { result = await executeTool(call.function.name, args, req.merchantId!); } catch (err: any) { result = { error: err?.message || 'Tool execution failed.' }; }
         artifacts.push(result);
         messages.push({ role: 'tool', tool_call_id: call.id, name: call.function.name, content: json(result) });
       }
