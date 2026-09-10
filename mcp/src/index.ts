@@ -1,10 +1,15 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import dotenv from 'dotenv';
-import { createMcpExpressApp } from '@modelcontextprotocol/express';
+import {
+  hostHeaderValidation,
+  originValidation,
+} from '@modelcontextprotocol/express';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import * as z from 'zod/v4';
+import { authenticateOAuthBearer, mountOAuthRoutes } from './oauth.js';
 
 dotenv.config({
   path: process.env.CELODESK_ENV_FILE || '/root/celodesk/.env',
@@ -31,6 +36,12 @@ if (!MERCHANT_ID) {
   throw new Error('Missing CELODESK_MERCHANT_ID in environment');
 }
 const MERCHANT_ID_VALUE = MERCHANT_ID;
+
+const merchantContext = new AsyncLocalStorage<string>();
+
+function currentMerchantId(): string {
+  return merchantContext.getStore() || MERCHANT_ID_VALUE;
+}
 
 function authenticateBearer(
   req: express.Request,
@@ -67,7 +78,7 @@ function authenticateBearer(
 function createBackendToken() {
   return jwt.sign(
     {
-      merchantId: MERCHANT_ID,
+      merchantId: currentMerchantId(),
       source: 'celodesk-mcp',
     },
     JWT_SECRET!,
@@ -149,7 +160,7 @@ function createServer() {
         const result = await backendFetch('/api/invoices', {
           method: 'POST',
           body: JSON.stringify({
-            merchantId: MERCHANT_ID_VALUE,
+            merchantId: currentMerchantId(),
             clientName,
             clientContact: clientContact || undefined,
             amount: String(amount),
@@ -290,8 +301,8 @@ function createServer() {
       try {
         const query =
           status === 'outstanding'
-            ? `?merchantId=${encodeURIComponent(MERCHANT_ID_VALUE)}&status=outstanding`
-            : `?merchantId=${encodeURIComponent(MERCHANT_ID_VALUE)}`;
+            ? `?merchantId=${encodeURIComponent(currentMerchantId())}&status=outstanding`
+            : `?merchantId=${encodeURIComponent(currentMerchantId())}`;
 
         const result = await backendFetch(`/api/invoices${query}`);
 
@@ -331,7 +342,7 @@ function createServer() {
     async () => {
       try {
         const result = await backendFetch(
-          `/api/invoices/summary/${MERCHANT_ID}`,
+          `/api/invoices/summary/${currentMerchantId()}`,
         );
 
         return {
@@ -369,7 +380,7 @@ function createServer() {
     async () => {
       try {
         const result = await backendFetch(
-          `/api/merchants/${MERCHANT_ID}`,
+          `/api/merchants/${currentMerchantId()}`,
         );
 
         return {
@@ -402,17 +413,20 @@ function createServer() {
 
 const handler = createMcpHandler(() => createServer());
 
-const app = createMcpExpressApp({
-  host: '127.0.0.1',
-  allowedHosts: [
-    'mcp.185-7-81-139.sslip.io',
-    '127.0.0.1',
-    'localhost',
-  ],
+const app = express();
+
+
+app.use((req, _res, next) => {
+  if (req.path === '/authorize' || req.path === '/token' || req.path.startsWith('/.well-known')) {
+    console.log('[OAUTH DEBUG]', req.method, req.path, 'origin=', req.headers.origin, 'host=', req.headers.host);
+  }
+  next();
 });
 
-
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+mountOAuthRoutes(app);
 
 app.get('/health', (_req, res) => {
   res.json({
@@ -423,8 +437,31 @@ app.get('/health', (_req, res) => {
 
 const nodeHandler = toNodeHandler(handler);
 
-app.all('/mcp', authenticateBearer, (req, res) => {
-  nodeHandler(req, res, req.body);
+app.use(
+  '/mcp',
+  hostHeaderValidation([
+    'mcp.185-7-81-139.sslip.io',
+    '127.0.0.1',
+    'localhost',
+  ]),
+);
+
+app.use(
+  '/mcp',
+  originValidation([
+    'mcp.185-7-81-139.sslip.io',
+  ]),
+);
+
+app.all('/mcp', authenticateOAuthBearer, (req, res) => {
+  const merchantId =
+    typeof res.locals.merchantId === 'string'
+      ? res.locals.merchantId
+      : MERCHANT_ID_VALUE;
+
+  merchantContext.run(merchantId, () => {
+    nodeHandler(req, res, req.body);
+  });
 });
 
 app.listen(PORT, '127.0.0.1', () => {

@@ -14,6 +14,7 @@ import jwt from 'jsonwebtoken';
 import { ethers } from 'ethers';
 import { PrismaClient } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
+import { getOrCreateMerchantByWallet } from '../services/merchantService';
 
 const prisma = new PrismaClient();
 export const router = Router();
@@ -140,6 +141,50 @@ router.post('/wallet', walletAuthLimiter, async (req, res) => {
     walletAddress: user.walletAddress,
     token,
   });
+});
+
+// POST /api/auth/mcp-wallet
+// Resolves or creates the wallet-based CeloDesk identity.
+// This endpoint is intended for MCP onboarding; existing-account
+// access must still be protected by an ownership/linking flow.
+router.post('/mcp-wallet', async (req, res) => {
+  const parsed = z.object({
+    walletAddress: z.string(),
+  }).safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: 'Invalid input',
+    });
+  }
+
+  try {
+    const normalizedWallet = ethers.getAddress(parsed.data.walletAddress);
+
+    const existing = await prisma.user.findUnique({
+      where: { walletAddress: normalizedWallet },
+    });
+
+    if (existing) {
+      return res.json({
+        merchantId: existing.id,
+        walletAddress: existing.walletAddress,
+        created: false,
+      });
+    }
+
+    const user = await getOrCreateMerchantByWallet(normalizedWallet);
+
+    return res.status(201).json({
+      merchantId: user.id,
+      walletAddress: user.walletAddress,
+      created: true,
+    });
+  } catch (err: any) {
+    return res.status(400).json({
+      error: err?.message || 'Unable to create wallet identity.',
+    });
+  }
 });
 
 // POST /api/auth/telegram-link

@@ -1,6 +1,32 @@
 import { PrismaClient } from '@prisma/client';
+import { ethers } from 'ethers';
 
 const prisma = new PrismaClient();
+
+/**
+ * Resolve a CeloDesk merchant from a wallet address.
+ *
+ * This is intentionally address-based for account creation/linking flows.
+ * Existing-account access must still establish wallet ownership through
+ * the appropriate authenticated linking flow.
+ */
+export async function getOrCreateMerchantByWallet(walletAddress: string) {
+  if (!ethers.isAddress(walletAddress)) {
+    throw new Error('walletAddress is not a valid Ethereum/Celo address.');
+  }
+
+  const normalizedWallet = ethers.getAddress(walletAddress);
+
+  return prisma.user.upsert({
+    where: {
+      walletAddress: normalizedWallet,
+    },
+    update: {},
+    create: {
+      walletAddress: normalizedWallet,
+    },
+  });
+}
 
 export async function getMerchant(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({
