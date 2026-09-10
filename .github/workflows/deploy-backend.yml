@@ -45,11 +45,12 @@ jobs:
 
       - name: Setup SSH
         env:
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
         run: |
+          set -e
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/celodesk_deploy
+          printf '%s' "$VPS_SSH_KEY_B64" | base64 --decode > ~/.ssh/celodesk_deploy
           chmod 600 ~/.ssh/celodesk_deploy
           ssh-keygen -y -f ~/.ssh/celodesk_deploy > ~/.ssh/celodesk_deploy.pub
           ssh-add ~/.ssh/celodesk_deploy
