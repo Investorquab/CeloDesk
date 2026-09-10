@@ -44,28 +44,34 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/celodesk_deploy
+          chmod 600 ~/.ssh/celodesk_deploy
+          ssh-keygen -y -f ~/.ssh/celodesk_deploy > ~/.ssh/celodesk_deploy.pub
+          ssh-add ~/.ssh/celodesk_deploy
 
       - name: Trust VPS host key
         run: |
-          mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Verify VPS SSH access
         run: |
-          ssh -o BatchMode=yes "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" 'echo "SSH connection OK"'
+          ssh -i ~/.ssh/celodesk_deploy -o IdentitiesOnly=yes -o BatchMode=yes "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" 'echo "SSH connection OK"'
 
       - name: Upload backend source
         run: |
           rsync -az --exclude='.env' --exclude='node_modules' --exclude='dist' \
+            -e 'ssh -i ~/.ssh/celodesk_deploy -o IdentitiesOnly=yes' \
             backend/ \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/root/celodesk/backend/"
 
       - name: Build and restart production API
         run: |
-          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" 'bash -s' <<'REMOTE'
+          ssh -i ~/.ssh/celodesk_deploy -o IdentitiesOnly=yes "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" 'bash -s' <<'REMOTE'
           set -e
           cd /root/celodesk/backend
           npm ci
