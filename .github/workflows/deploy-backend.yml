@@ -52,20 +52,24 @@ jobs:
           chmod 700 ~/.ssh
           python3 - <<'PY'
           import base64, os
-          value = os.environ["VPS_SSH_KEY_B64"]
+          value = os.environ.get("VPS_SSH_KEY_B64", "")
           value = "".join(value.split())
+          if not value:
+              raise SystemExit("VPS_SSH_KEY_B64 is empty or missing")
           value += "=" * ((4 - len(value) % 4) % 4)
-          key = base64.b64decode(value, validate=True)
+          try:
+              key = base64.b64decode(value, validate=True)
+          except Exception as exc:
+              raise SystemExit(f"VPS_SSH_KEY_B64 is not valid base64: {exc}")
           with open(os.path.expanduser("~/.ssh/celodesk_deploy"), "wb") as f:
               f.write(key)
           PY
           chmod 600 ~/.ssh/celodesk_deploy
           ssh-keygen -y -f ~/.ssh/celodesk_deploy > ~/.ssh/celodesk_deploy.pub
-          ssh-add ~/.ssh/celodesk_deploy
+          echo "SSH private key decoded and validated."
 
       - name: Trust VPS host key
         run: |
-          mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Verify VPS SSH access
