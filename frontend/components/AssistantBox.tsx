@@ -112,10 +112,10 @@ export default function AssistantBox({ merchantId, onInvoiceCreated }: { merchan
     setMessages((current) => [...current, userMessage]);
 
     try {
-      const result = await api.agent(merchantId, q, history.slice(-10));
+      const result = await api.agent(merchantId, q, history.slice(-6));
       const reply = result.reply || 'Done.';
       setMessages((current) => [...current, { id: `${Date.now()}-assistant`, role: 'assistant', text: reply }]);
-      setHistory((current) => [...current, { role: 'user' as const, content: q }, { role: 'assistant' as const, content: reply }].slice(-12));
+      setHistory((current) => [...current, { role: 'user' as const, content: q }, { role: 'assistant' as const, content: reply }].slice(-6));
       setArtifacts(result.artifacts || []);
 
       const createdArtifact = (result.artifacts || []).find((artifact: Artifact) => artifact?.action === 'invoice_created');
@@ -131,7 +131,8 @@ export default function AssistantBox({ merchantId, onInvoiceCreated }: { merchan
 
   const created = [...artifacts].reverse().find((artifact) => artifact?.action === 'invoice_created')?.invoice;
   const lastMessage = messages[messages.length - 1];
-  const askingForToken = !created && !busy && lastMessage?.role === 'assistant' && /which (payment )?token|payment token/i.test(lastMessage.text);
+  const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user');
+  const askingForToken = !created && !busy && lastMessage?.role === 'assistant' && lastUserMessage?.role === 'user' && /\b(?:\$|usd|dollars?|million dollars?|thousand dollars?)\b/i.test(lastUserMessage.text) && /which (payment )?token|what (payment )?token|choose (a )?(payment )?token/i.test(lastMessage.text);
 
   function invoiceUrl() {
     if (!created) return '';
@@ -215,7 +216,7 @@ export default function AssistantBox({ merchantId, onInvoiceCreated }: { merchan
                 <div className="assistantCreatedActions">
                   <Link className="assistantCreatedButton primary" href={`/invoice/${encodeURIComponent(created.publicSlug)}`}>View invoice <ArrowRight size={13} /></Link>
                   <button className="assistantCreatedButton" onClick={shareInvoice}>Share</button>
-                  <button className="assistantCreatedButton" onClick={copyInvoiceLink}><Copy size={13} />{copyState || 'Copy link'}</button>
+                  <button className="assistantCreatedButton copyButton" onClick={copyInvoiceLink}><Copy size={13} />{copyState || 'Copy link'}</button>
                 </div>
                 {(shareState || copyState) && <small className="assistantShareState">{shareState || copyState}</small>}
               </div>
@@ -266,8 +267,8 @@ export default function AssistantBox({ merchantId, onInvoiceCreated }: { merchan
         .assistantCreatedInConversation{border:1px solid rgba(100,229,192,.2);background:linear-gradient(145deg,rgba(14,108,81,.48),rgba(8,47,37,.65));border-radius:17px;padding:13px;margin:1px 2px 0;box-shadow:0 10px 28px rgba(0,0,0,.12)}
         .assistantCreatedHeader{display:flex;align-items:center;justify-content:space-between;gap:10px}.assistantCreatedEyebrow{display:inline-flex;align-items:center;gap:5px;color:#76e5c2;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.assistantCreatedStatus{font-size:8px;font-weight:800;color:#a7cfc1;background:rgba(255,255,255,.06);border-radius:999px;padding:4px 7px}
         .assistantCreatedBody{display:grid;gap:3px;margin:10px 0 12px}.assistantCreatedBody strong{font-family:Manrope;font-size:15px;letter-spacing:-.02em}.assistantCreatedBody b{font-family:Manrope;font-size:21px;letter-spacing:-.04em}.assistantCreatedBody span{font-size:10px;color:#a9c8bd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .assistantCreatedActions{display:flex;gap:7px;flex-wrap:wrap}.assistantCreatedButton{border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07);color:#e8f5f0;border-radius:10px;padding:8px 10px;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:5px;cursor:pointer}.assistantCreatedButton.primary{background:#19b985;border-color:#29c999;color:#06251c}.assistantCreatedButton:hover{transform:translateY(-1px)}.assistantShareState{display:block;margin-top:7px;color:#7be2c1;font-size:9px;font-weight:800}
-        @media(max-width:560px){.assistantConversation{max-height:330px;gap:12px}.assistantMessage{max-width:91%}.assistantMessageBubble{font-size:11px;padding:9px 11px}.assistantTokenPicker{grid-template-columns:repeat(2,1fr)}.assistantCreatedInConversation{padding:12px}.assistantCreatedBody b{font-size:19px}.assistantCreatedActions{display:grid;grid-template-columns:1fr 1fr}.assistantCreatedButton{min-height:34px}.assistantCreatedButton.primary{grid-column:1/-1}.assistantInput input{font-size:16px!important;line-height:1.2}.assistantInput{position:relative}}
+        .assistantCreatedActions{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:7px}.assistantCreatedButton{min-width:0;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07);color:#e8f5f0;border-radius:10px;padding:8px 10px;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;text-decoration:none;white-space:nowrap}.assistantCreatedButton.copyButton{grid-column:1/-1}.assistantCreatedButton.primary{background:#19b985;border-color:#29c999;color:#06251c}.assistantCreatedButton:hover{transform:translateY(-1px)}.assistantShareState{display:block;margin-top:7px;color:#7be2c1;font-size:9px;font-weight:800}
+        @media(max-width:560px){.assistantConversation{max-height:330px;gap:12px}.assistantMessage{max-width:91%}.assistantMessageBubble{font-size:11px;padding:9px 11px}.assistantTokenPicker{grid-template-columns:repeat(2,1fr)}.assistantCreatedInConversation{padding:12px}.assistantCreatedBody b{font-size:19px}.assistantCreatedActions{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}.assistantCreatedButton{min-height:34px}.assistantInput input{font-size:16px!important;line-height:1.2}.assistantInput{position:relative}}
       `}</style>
     </>
   );
