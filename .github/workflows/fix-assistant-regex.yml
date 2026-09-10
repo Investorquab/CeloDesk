@@ -1,0 +1,35 @@
+name: Fix AssistantBox Regex
+
+on:
+  push:
+    paths:
+      - 'automation/fix-assistant-regex.trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Correct token picker regex
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/components/AssistantBox.tsx')
+          s = p.read_text()
+          s = s.replace('/\\\\b(?:\\\\$|usd|dollars?|million dollars?|thousand dollars?)\\\\b/i', '/(?:\\$|usd|dollars?|million dollars?|thousand dollars?)/i')
+          p.write_text(s)
+          PY
+          grep -n "askingForToken" frontend/components/AssistantBox.tsx
+      - name: Commit and clean up
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/components/AssistantBox.tsx
+          git rm -f automation/fix-assistant-regex.trigger .github/workflows/fix-assistant-regex.yml
+          git commit -m "Correct assistant token picker matching"
+          git push origin main
