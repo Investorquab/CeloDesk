@@ -47,16 +47,25 @@ jobs:
         env:
           VPS_SSH_KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
         run: |
-          set -e
+          set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s' "$VPS_SSH_KEY_B64" | base64 --decode > ~/.ssh/celodesk_deploy
+          python3 - <<'PY'
+          import base64, os
+          value = os.environ["VPS_SSH_KEY_B64"]
+          value = "".join(value.split())
+          value += "=" * ((4 - len(value) % 4) % 4)
+          key = base64.b64decode(value, validate=True)
+          with open(os.path.expanduser("~/.ssh/celodesk_deploy"), "wb") as f:
+              f.write(key)
+          PY
           chmod 600 ~/.ssh/celodesk_deploy
           ssh-keygen -y -f ~/.ssh/celodesk_deploy > ~/.ssh/celodesk_deploy.pub
           ssh-add ~/.ssh/celodesk_deploy
 
       - name: Trust VPS host key
         run: |
+          mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Verify VPS SSH access
