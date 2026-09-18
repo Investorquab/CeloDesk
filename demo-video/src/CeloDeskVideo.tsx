@@ -107,6 +107,14 @@ function Header() {
   );
 }
 
+function SceneMark({label}:{label:string}) {
+  return (
+    <div style={{position:"absolute", left:74, right:74, bottom:34, display:"flex", justifyContent:"space-between", alignItems:"center", fontFamily:mono, fontSize:11, letterSpacing:1.2, color:MUTED}}>
+      <span>CELODESK / PRODUCT FILM</span><span>{label}</span>
+    </div>
+  );
+}
+
 function TitleScene() {
   const frame = useCurrentFrame();
   const scale = spring({ frame, fps: 30, config: { damping: 16, stiffness: 90 } });
