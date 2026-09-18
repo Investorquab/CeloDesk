@@ -155,3 +155,65 @@ export async function findVerifiedTokenTransfer(
   }
   return null;
 }
+
+
+export async function findRecentDirectTokenPayment(
+  provider: ethers.JsonRpcProvider,
+  input: {
+    tokenAddress: string;
+    receivingWallet: string;
+    decimals: number;
+    minBlock?: number;
+  },
+): Promise<{
+  txHash: string;
+  fromAddress: string;
+  amount: string;
+  blockNumber: number;
+  confirmations: number;
+  blockTimestamp: number;
+} | null> {
+  const latestBlock = await provider.getBlockNumber();
+  const fromBlock = Math.max(input.minBlock ?? 0, latestBlock - 10_000);
+  const transferTopic = ethers.id('Transfer(address,address,uint256)');
+  const recipientTopic = ethers.zeroPadValue(input.receivingWallet, 32);
+
+  const logs = await provider.getLogs({
+    address: input.tokenAddress,
+    fromBlock,
+    toBlock: latestBlock,
+    topics: [transferTopic, null, recipientTopic],
+  });
+
+  for (const log of [...logs].reverse()) {
+    if (!log.transactionHash) continue;
+
+    try {
+      const iface = new ethers.Interface(ERC20_TRANSFER_ABI);
+      const parsed = iface.parseLog(log);
+      if (!parsed || parsed.name !== 'Transfer') continue;
+
+      const block = await provider.getBlock(log.blockNumber);
+      if (!block) continue;
+
+      const receipt = await provider.getTransactionReceipt(log.transactionHash);
+      if (!receipt || receipt.status !== 1) continue;
+
+      const confirmations = latestBlock - receipt.blockNumber + 1;
+      if (confirmations < MIN_CONFIRMATIONS) continue;
+
+      return {
+        txHash: log.transactionHash,
+        fromAddress: parsed.args.from as string,
+        amount: ethers.formatUnits(parsed.args.value as bigint, input.decimals),
+        blockNumber: receipt.blockNumber,
+        confirmations,
+        blockTimestamp: block.timestamp,
+      };
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
