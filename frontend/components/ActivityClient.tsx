@@ -6,7 +6,7 @@ import AppNav from './AppNav';
 import {userFacingError} from '../lib/userFacingError';
 import {Activity as ActivityIcon,ArrowLeft,Check,Clock,Alert,Receipt,Wallet} from './Icons';
 
-type EventItem={id:string;kind:'created'|'sent'|'viewed'|'paid'|'pending'|'failed';title:string;subtitle:string;amount?:string;time:string;status?:string;href?:string;};
+type EventItem={id:string;kind:'created'|'paid'|'pending'|'failed';title:string;subtitle:string;amount?:string;time:string;status?:string;href?:string;};
 function buildEvents(invoices:Invoice[],returnTo:string):EventItem[]{
  const out:EventItem[]=[];
  for(const i of invoices){
@@ -21,12 +21,12 @@ function buildEvents(invoices:Invoice[],returnTo:string):EventItem[]{
  }
  return out.sort((a,b)=>+new Date(b.time)-+new Date(a.time));
 }
-function EventIcon({kind}:{kind:EventItem['kind']}){if(kind==='paid')return <Check size={17}/>;if(kind==='pending')return <Clock size={17}/>;if(kind==='failed')return <Alert size={17}/>;if(kind==='created')return <Receipt size={17}/>;if(kind==='sent')return <Wallet size={17}/>;return <ActivityIcon size={17}/>}
+function EventIcon({kind}:{kind:EventItem['kind']}){if(kind==='paid')return <Check size={17}/>;if(kind==='pending')return <Clock size={17}/>;if(kind==='failed')return <Alert size={17}/>;if(kind==='created')return <Receipt size={17}/>;return <ActivityIcon size={17}/>}
 export default function ActivityClient({merchantId}:{merchantId:string}){
  const [invoices,setInvoices]=useState<Invoice[]>([]),[loading,setLoading]=useState(true),[err,setErr]=useState(''),[filter,setFilter]=useState('All');
  useEffect(()=>{setLoading(true);api.listInvoices(merchantId).then(x=>setInvoices(x)).catch(e=>setErr(userFacingError(e,'Could not load activity.'))).finally(()=>setLoading(false))},[merchantId]);
  const events=useMemo(()=>buildEvents(invoices,`/dashboard/activity?merchantId=${merchantId}`),[invoices,merchantId]);
- const filtered=events.filter(e=>filter==='All'||(filter==='Payments'&&['paid','pending','failed'].includes(e.kind))||(filter==='Invoices'&&['created','sent','viewed'].includes(e.kind))||(filter===e.status));
+ const filtered=events.filter(e=>filter==='All'||(filter==='Payments'&&['paid','pending','failed'].includes(e.kind))||(filter==='Invoices'&&e.kind==='created')||(filter===e.status));
  return <div className="appShell"><div className="topbar"><div className="topbarInner"><Link href={`/dashboard?merchantId=${merchantId}`} className="brand"><span className="brandMark"/>CeloDesk</Link><Link href={`/dashboard?merchantId=${merchantId}`} className="btn btnGhost"><ArrowLeft size={16}/>Back</Link></div></div><div className="appPage"><div className="container appGrid"><AppNav merchantId={merchantId}/><main className="main">
   <div className="pageTitleRow"><div><div className="muted" style={{fontSize:11}}>ACCOUNT ACTIVITY</div><h1>Activity</h1><p className="muted">Every invoice and payment event in one place.</p></div><div className="activityCount">{events.length} events</div></div>
   <div className="filterBar">{['All','Payments','Invoices','Pending','Verified','Failed'].map(x=><button key={x} className={filter===x?'filterActive':''} onClick={()=>setFilter(x)}>{x}</button>)}</div>
