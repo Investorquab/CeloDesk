@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { ethers } from 'ethers';
 
 const BASE_URL = 'https://mcp.185-7-81-139.sslip.io';
 const RESOURCE_URL = `${BASE_URL}/mcp`;
