@@ -10,8 +10,9 @@ import {
   markInvoiceViewed,
   cancelInvoice,
   createPaymentIntent,
+  refreshInvoicePaymentStatus,
 } from '../services/invoiceService';
-import { verifyPayment, findVerifiedTokenTransfer, findRecentDirectTokenPayments } from '../services/paymentVerifier';
+import { verifyPayment, findVerifiedTokenTransfer } from '../services/paymentVerifier';
 import { CELO_TOKENS, getToken } from '../celo/tokens';
 import { appendAttribution } from '../services/attribution';
 import { PrismaClient } from '@prisma/client';
@@ -147,96 +148,7 @@ router.get('/:id/payment-intent', async (req, res) => {
 // GET /api/invoices/:id/status
 router.get('/:id/status', async (req, res) => {
   try {
-    const invoice = await getInvoice(req.params.id);
-
-    if (['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status)) {
-      const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-      const token = getToken(invoice.tokenSymbol);
-
-      const candidates = await prisma.invoice.findMany({
-        where: {
-          merchantId: invoice.merchantId,
-          tokenAddress: invoice.tokenAddress,
-          receivingWallet: invoice.receivingWallet,
-          status: { in: ['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE'] },
-        },
-        include: { payments: { where: { status: 'VERIFIED' }, select: { amount: true } } },
-      });
-
-      const directPayments = await findRecentDirectTokenPayments(provider, {
-        tokenAddress: token.address,
-        receivingWallet: invoice.receivingWallet,
-        decimals: token.decimals,
-        maxBlocks: 50_000,
-      });
-
-      for (const directPayment of directPayments) {
-        const paymentAlreadyRecorded = await prisma.payment.findUnique({
-          where: { txHash: directPayment.txHash },
-        });
-        if (paymentAlreadyRecorded) continue;
-
-        const paymentAmountUnits = ethers.parseUnits(directPayment.amount, token.decimals);
-        const matchingCandidates = candidates.filter((candidate) => {
-          const expectedUnits = ethers.parseUnits(candidate.amount.toString(), token.decimals);
-          const paidUnits = candidate.payments.reduce(
-            (sum, payment) => sum + ethers.parseUnits(payment.amount.toString(), token.decimals),
-            0n,
-          );
-          const remainingUnits = expectedUnits > paidUnits ? expectedUnits - paidUnits : 0n;
-          return remainingUnits > 0n &&
-            directPayment.blockTimestamp * 1000 >= candidate.createdAt.getTime() &&
-            paymentAmountUnits >= remainingUnits;
-        });
-
-        // A direct QR transfer has no invoice ID in the ERC-20 transfer
-        // itself. Only auto-reconcile when exactly one outstanding invoice
-        // can safely be matched; otherwise leave it for explicit review.
-        if (matchingCandidates.length !== 1) continue;
-
-        const target = matchingCandidates[0];
-        const expectedUnits = ethers.parseUnits(target.amount.toString(), token.decimals);
-        const priorUnits = target.payments.reduce(
-          (sum, payment) => sum + ethers.parseUnits(payment.amount.toString(), token.decimals),
-          0n,
-        );
-        const aggregate = priorUnits + paymentAmountUnits;
-        const newStatus = aggregate > expectedUnits
-          ? 'OVERPAID'
-          : aggregate === expectedUnits
-            ? 'PAID'
-            : 'PARTIALLY_PAID';
-
-        await prisma.$transaction(async (tx) => {
-          await tx.payment.create({
-            data: {
-              invoiceId: target.id,
-              txHash: directPayment.txHash,
-              chainId: target.chainId,
-              fromAddress: directPayment.fromAddress,
-              toAddress: target.receivingWallet,
-              tokenAddress: target.tokenAddress,
-              amount: directPayment.amount,
-              status: 'VERIFIED',
-              confirmations: directPayment.confirmations,
-              blockNumber: directPayment.blockNumber,
-              verifiedAt: new Date(),
-            },
-          });
-          await tx.invoice.update({
-            where: { id: target.id },
-            data: { status: newStatus },
-          });
-        });
-
-        // Re-fetching the candidate set is intentionally avoided here: one
-        // successful direct payment is enough to settle this invoice, and the
-        // outer request will reload the requested invoice below.
-        break;
-      }
-    }
-
-    const refreshed = await getInvoice(req.params.id);
+    const refreshed = await refreshInvoicePaymentStatus(req.params.id);
     res.json({
       status: refreshed.status,
       payments: refreshed.payments.map((payment) => ({
