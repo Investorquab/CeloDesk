@@ -1,118 +1,172 @@
 # CeloDesk
 
 > **Ask for payment. Get paid. Know when it's paid.**
->
-> CeloDesk is an AI-powered payment desk for businesses, freelancers, and creators using stablecoins on Celo.
 
-[🌐 Open CeloDesk](https://celo-desk.vercel.app) · [💬 Open Telegram](https://t.me/celoagentbot) · [🤖 Connect MCP](https://mcp.185-7-81-139.sslip.io/mcp) · [📦 View source](https://github.com/Investorquab/CeloDesk)
+CeloDesk is an AI-powered payment desk for businesses, freelancers, and creators using stablecoins on Celo.
 
----
+It lets a merchant **create an invoice, share it, receive a direct wallet payment, verify that payment on-chain, and track the result** — from the web, Telegram, or an external AI assistant such as Claude.
 
-## What did we build?
+## 🚀 Try CeloDesk
 
-CeloDesk makes crypto invoicing feel more like a normal business payment workflow.
+### 🌐 Live app
 
-A merchant can:
+**[Open CeloDesk →](https://celo-desk.vercel.app)**
 
-**Create an invoice → share it → receive a stablecoin payment → have CeloDesk verify the payment → track who has paid and who still owes money.**
+Create an invoice, share it, and open the customer payment page.
 
-And the merchant can manage the same payment desk from **three different places**:
+### 💬 Telegram
 
-- 🌐 **Web app** — create invoices, share them, view payments, and use the customer checkout.
-- 💬 **Telegram** — talk to CeloDesk in plain English to create invoices and check payment activity.
-- 🤖 **Claude / MCP** — connect CeloDesk to an external AI assistant and manage real invoices through conversation.
+**[Open CeloDesk on Telegram →](https://t.me/celoagentbot)**
 
-The important part is that these are **not three separate demos**. They connect to the same CeloDesk backend, invoice records, and payment verification system.
-
----
-
-## 🚀 Try it yourself
-
-### 1. Web app
-
-**[Open the live CeloDesk app →](https://celo-desk.vercel.app)**
-
-Create an invoice, open its payment page, and test the customer checkout.
-
-### 2. Telegram
-
-**[Open the CeloDesk Telegram bot →](https://t.me/celoagentbot)**
-
-Try messages such as:
-
-> Create an invoice for Moji for 0.01 USDT for a design job.
-
-> Which invoices are still unpaid?
-
-> Show me my payment summary.
-
-### 3. Claude / MCP
-
-**[Open the CeloDesk MCP endpoint →](https://mcp.185-7-81-139.sslip.io/mcp)**
-
-Once connected to a supported MCP client, Claude can work with the merchant's real CeloDesk data.
+Talk to CeloDesk in plain English.
 
 Try:
 
-> Create an invoice for a client for 0.01 USDT for an integration test.
+> Create an invoice for Moji for 0.01 USDT for a design job.
 
-Then:
+> Who still owes me?
 
-> Check my invoices and tell me which ones have been paid.
+> Show me my payment summary.
 
----
+### 🤖 Claude / MCP
 
-## 💳 The payment experience
+**[Open the CeloDesk MCP endpoint →](https://mcp.185-7-81-139.sslip.io/mcp)**
 
-CeloDesk does **not** take custody of the client's money.
+CeloDesk can be connected to a supported MCP client so an AI assistant can work with real CeloDesk invoices and payment data.
 
-The invoice contains the merchant's receiving wallet and the selected stablecoin. A client can pay directly from a compatible Celo wallet.
+### 📦 Source code
 
-The checkout also provides a **direct payment QR request**. Scanning it with a compatible wallet prepares the token transfer to the merchant's wallet.
-
-There is no requirement for the client to send a screenshot or manually tell CeloDesk that they paid.
-
-After the transfer reaches Celo:
-
-**CeloDesk checks the blockchain and records the verified payment.**
-
-### What we have verified
-
-The direct QR flow has been tested with a compatible wallet:
-
-**QR scan → wallet prepares payment → client confirms → payment reaches merchant wallet → CeloDesk detects the transfer → invoice becomes PAID → Claude can read the updated PAID status.**
-
-This is the core payment loop of the product.
-
-> **MiniPay note:** the current QR is intentionally described as a **compatible-wallet payment QR**. MiniPay-specific QR/deep-link behavior is documented separately and is not claimed as verified in the current release.
+**[View the GitHub repository →](https://github.com/Investorquab/CeloDesk)**
 
 ---
 
-## 🤖 Why the AI matters
+## 💡 What problem does CeloDesk solve?
 
-The AI is not just a chatbot sitting on top of a static demo.
+Receiving crypto payments can become messy:
 
-It can perform real CeloDesk operations.
+- sharing wallet addresses
+- creating payment requests
+- sending invoice details
+- checking whether someone actually paid
+- tracking who still owes money
+- switching between different tools to manage everything
+
+CeloDesk brings that workflow into one place.
+
+### The simple idea
+
+**Create → Share → Pay → Verify → Track**
+
+A business does not need to become a blockchain expert just to get paid in stablecoins.
+
+---
+
+## ✨ What we built
+
+### 🧾 AI-powered invoicing
+
+A merchant can tell CeloDesk what they want in normal language.
 
 For example:
 
-> **"Create an invoice for David for 5 USDT for website design."**
+> “Create an invoice for David for 5 USDT for website design.”
 
-CeloDesk can create the actual invoice.
+CeloDesk creates the real invoice.
 
-Then:
+### 💳 Direct wallet payments
 
-> **"Who still owes me?"**
+Customers pay directly to the merchant's receiving wallet.
 
-CeloDesk reads the merchant's actual invoice/payment data.
+The customer checkout includes a **direct payment QR**. Scanning it with a compatible wallet prepares the token payment for the merchant.
 
-And after a client pays:
+**The QR is a payment request — it is not an invoice-website redirect.**
 
-> **"Check my invoices."**
+### ⛓️ On-chain payment verification
 
-The AI can see the reconciled payment state from the same backend.
+CeloDesk does not simply trust a screenshot or a message saying “I paid.”
 
-### Available AI operations
+It checks the actual transaction on Celo before recording the payment as verified.
+
+### 🤖 AI access
+
+The same payment desk can be controlled through:
+
+**Web → Telegram → Claude**
+
+These are different interfaces connected to the same CeloDesk backend and payment records.
+
+### 💬 Telegram
+
+A merchant can create invoices and check payment activity directly from Telegram.
+
+### 🌍 Celo
+
+Celo Mainnet is used for payment settlement and verification.
+
+---
+
+## 🔥 The part we actually proved
+
+We tested the important payment loop with a real direct QR payment:
+
+**QR scan → wallet prepares payment → customer confirms → payment reaches merchant wallet → CeloDesk detects the transfer → invoice becomes PAID → Claude reads the updated PAID status.**
+
+Telegram can also read the same payment state.
+
+That means the product is not just three interfaces placed beside each other. The interfaces connect to the same underlying payment system.
+
+---
+
+## 🧩 How it works
+
+Merchant side:
+
+**Merchant → Web / Telegram / Claude → CeloDesk API → Invoice & payment records → Payment verification → Celo Mainnet**
+
+Customer side:
+
+**Public invoice → Direct payment QR / wallet → Celo transaction → CeloDesk verification → PAID → Merchant**
+
+---
+
+## 🔐 Why the payment status can be trusted
+
+The important rule is simple:
+
+> **CeloDesk only treats a payment as PAID after the backend verifies the on-chain payment.**
+
+The verification process checks the relevant transaction details, including:
+
+- successful transaction
+- Celo network
+- expected token
+- merchant receiving wallet
+- required amount
+- confirmation state
+- duplicate-payment protection
+
+For direct QR payments, CeloDesk also reconciles the on-chain token transfer with the appropriate outstanding invoice.
+
+CeloDesk does **not** custody the customer's funds.
+
+---
+
+## 🪙 Supported payment tokens
+
+The current verified invoice/payment flow supports:
+
+- **USDT**
+- **USDC**
+- **USDm**
+- **NGNm**
+
+Payments settle on **Celo Mainnet (chain ID 42220)**.
+
+---
+
+## 🤖 What the AI can do
+
+CeloDesk's AI interfaces can perform real payment-management operations such as:
 
 - 🧾 Create invoices
 - 🔎 Check invoice status
@@ -121,294 +175,85 @@ The AI can see the reconciled payment state from the same backend.
 - 👤 View merchant profile
 - 🔗 Retrieve invoice/payment information
 
----
-
-## 🌍 Why Celo?
-
-CeloDesk uses **Celo Mainnet (chain ID 42220)** as its payment settlement and verification layer.
-
-The product is designed around a simple idea:
-
-> **A business should be able to ask for a stablecoin payment without needing to become a blockchain expert.**
-
-The blockchain remains the source of truth for settlement, while CeloDesk turns that settlement into a usable business workflow.
+The AI does not get to simply declare an invoice paid. The payment state comes from the CeloDesk backend and its verification layer.
 
 ---
 
-## ✨ What makes CeloDesk different?
+## 🧪 Current product status
 
-### One payment desk, multiple interfaces
-
-A merchant can use the interface that feels natural to them:
-
-**Web → Telegram → Claude**
-
-All three work with the same underlying CeloDesk data.
-
-### Verified payments, not screenshots
-
-CeloDesk does not simply trust a "payment successful" message.
-
-The backend independently checks the transaction on Celo before recording a verified payment.
-
-### Direct wallet payments
-
-Clients pay directly to the merchant's receiving wallet.
-
-CeloDesk does not need to hold customer funds.
-
-### AI + real financial actions
-
-The AI can create and inspect real invoices instead of only answering generic questions about payments.
-
----
-
-## 🧩 Product flow
-
-```text
-                    MERCHANT
-                       │
-              ┌────────┼────────┐
-              │        │        │
-              ▼        ▼        ▼
-            Web     Telegram   Claude
-              │        │        │
-              └────────┼────────┘
-                       ▼
-                 CeloDesk API
-                       │
-             ┌─────────┴─────────┐
-             ▼                   ▼
-          Invoices          Payment verifier
-                                   │
-                                   ▼
-                             Celo Mainnet
-                                   │
-                                   ▼
-                              Merchant wallet
-```
-
-Customer side:
-
-```text
-Invoice page
-     │
-     ▼
-Choose compatible wallet
-     │
-     ▼
-Direct payment QR / wallet flow
-     │
-     ▼
-Celo transaction
-     │
-     ▼
-CeloDesk verifies transfer
-     │
-     ▼
-Invoice → PAID
-     │
-     ├── Web dashboard
-     ├── Telegram
-     └── Claude / MCP
-```
-
----
-
-## 🏗️ What is inside the project?
-
-| Part | What it does |
-|---|---|
-| 🌐 `frontend/` | Web app, merchant dashboard, invoice creation, checkout and payment UI |
-| ⚙️ `backend/` | Authentication, invoices, payment verification, merchant data and AI operations |
-| 💬 `agent/` | Telegram agent |
-| 🤖 `mcp/` | Remote MCP server for external AI clients such as Claude |
-| 🗄️ `prisma/` | Database schema and migrations |
-| 📚 `docs/` | Architecture, security, integration and submission documentation |
-
-### Technology
-
-- Next.js / React / TypeScript
-- Node.js / Express
-- PostgreSQL / Prisma
-- Celo Mainnet
-- Groq
-- Telegram / Telegraf
-- Model Context Protocol (MCP)
-- EVM-compatible wallet payments
-
----
-
-## 🔐 Payment verification
-
-When a payment is submitted through the normal checkout flow, CeloDesk verifies the transaction independently.
-
-The verification layer checks things including:
-
-- successful transaction
-- correct Celo network
-- expected token
-- merchant receiving wallet
-- payment amount
-- confirmation depth
-- duplicate transaction protection
-
-Direct QR payments are also reconciled by looking for verified token transfers to the invoice's receiving wallet.
-
-Because a direct ERC-20 transfer does not contain a CeloDesk invoice ID, direct-payment reconciliation uses the merchant, token, receiving wallet, amount, timing, and existing payment records to match the transfer to an outstanding invoice.
-
----
-
-## 📊 Invoice statuses
-
-CeloDesk can represent invoice states including:
-
-```text
-DRAFT
-  ↓
-SENT
-  ↓
-VIEWED
-  ↓
-PENDING
-  ↓
-PAID
-
-PARTIALLY_PAID → PAID
-               ↘ OVERPAID
-
-OVERDUE / CANCELLED / FAILED / EXPIRED
-```
-
-The important rule is:
-
-> **PAID means CeloDesk has verified a payment.**
-
----
-
-## 🧪 Current verified status
-
-The current release has been tested across the main product paths:
+### Working and tested
 
 - ✅ Live web application
 - ✅ Invoice creation
-- ✅ Public invoice/payment page
-- ✅ Direct payment QR with a compatible wallet
-- ✅ On-chain payment detection
-- ✅ Invoice reconciliation to PAID
-- ✅ Claude/MCP invoice access
-- ✅ Claude reading reconciled payment status
-- ✅ Telegram agent and formatted responses
-- ✅ Production backend / agent / MCP services
-- ✅ Frontend production build/deployment
-- ⏳ MiniPay-specific QR/deep-link testing remains a separate follow-up after approved MiniPay developer access
+- ✅ Public customer checkout
+- ✅ Direct payment QR
+- ✅ Compatible-wallet payment flow
+- ✅ Celo on-chain payment detection
+- ✅ Payment reconciliation to PAID
+- ✅ Claude / MCP access
+- ✅ Telegram agent
+- ✅ Shared payment state across interfaces
+- ✅ Production backend, agent, and MCP services
+- ✅ Production frontend deployment
 
-For the exact final submission procedure, see **[docs/SUBMISSION.md](docs/SUBMISSION.md)**.
+### Not claimed as complete
+
+- ⏳ MiniPay-specific QR/deep-link testing requires the approved MiniPay developer testing environment.
+
+The current QR is therefore described as a **compatible-wallet payment QR**, not a universal MiniPay QR.
 
 ---
 
 ## 🔗 Important links
 
-| Resource | Link |
+| Resource | Open |
 |---|---|
-| 🌐 **Live CeloDesk** | https://celo-desk.vercel.app |
-| 💬 **Telegram bot** | https://t.me/celoagentbot |
-| 🤖 **MCP endpoint** | https://mcp.185-7-81-139.sslip.io/mcp |
-| 📦 **GitHub repository** | https://github.com/Investorquab/CeloDesk |
-| 👛 **CeloDesk agent wallet** | https://celoscan.io/address/0x00d1E86040d88397F4eB187c38dC527F6659e486 |
-| 📚 **Submission checklist** | [docs/SUBMISSION.md](docs/SUBMISSION.md) |
-| 🛡️ **Security notes** | [backend/docs/SECURITY.md](backend/docs/SECURITY.md) |
-| 🏛️ **Architecture** | [backend/docs/ARCHITECTURE.md](backend/docs/ARCHITECTURE.md) |
-| 💬 **Telegram integration** | [docs/TELEGRAM.md](docs/TELEGRAM.md) |
+| 🌐 **CeloDesk** | **[Live app](https://celo-desk.vercel.app)** |
+| 💬 **Telegram** | **[Open bot](https://t.me/celoagentbot)** |
+| 🤖 **MCP** | **[Open endpoint](https://mcp.185-7-81-139.sslip.io/mcp)** |
+| 📦 **GitHub** | **[View source](https://github.com/Investorquab/CeloDesk)** |
+| ⛓️ **Celo** | **[Celo mainnet explorer](https://celoscan.io/)** |
+| 📚 **Demo guide** | **[End-to-end demo](docs/DEMO.md)** |
+| 🏗️ **Technical overview** | **[Architecture](docs/ARCHITECTURE.md)** |
 
 ---
 
-## 🧑‍💻 For developers
+## 🎥 Recommended demo
 
-The technical documentation lives under `docs/` and `backend/docs/`.
+The strongest product demonstration is one real payment:
 
-If you only want to understand the product, **you do not need to read the technical documentation**. Start with the live app and the sections above.
+1. Create an invoice.
+2. Open the public payment page.
+3. Scan the direct payment QR.
+4. Confirm the wallet payment.
+5. Show the transaction on Celo.
+6. Show CeloDesk changing the invoice to **PAID**.
+7. Ask Claude to check the invoice.
+8. Ask Telegram to show the same payment state.
 
-If you want to run the project locally:
-
-### Requirements
-
-- Node.js 20+
-- PostgreSQL
-- Celo RPC endpoint
-- Groq API key
-- Telegram bot token for the Telegram agent
-
-### Backend
-
-```bash
-cd backend
-npm install
-npm run prisma:generate
-npm run dev
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Telegram agent
-
-```bash
-cd agent
-npm install
-npm run dev
-```
-
-### MCP server
-
-```bash
-cd mcp
-npm install
-npm run build
-npm start
-```
-
-Never commit real secrets such as database credentials, JWT secrets, API keys, Telegram tokens or private keys.
+See **[docs/DEMO.md](docs/DEMO.md)** for the short demonstration guide.
 
 ---
 
-## 📚 Documentation map
+## 🛠️ For developers
 
-**Start here:** [Submission guide](docs/SUBMISSION.md)
+The repository contains four main application areas:
 
-Technical documentation:
+| Folder | Purpose |
+|---|---|
+| `frontend/` | Web app, merchant dashboard and customer checkout |
+| `backend/` | API, invoice logic and payment verification |
+| `agent/` | Telegram agent |
+| `mcp/` | Remote MCP server |
 
-- [Architecture](backend/docs/ARCHITECTURE.md)
-- [API reference](backend/docs/API.md)
-- [Security](backend/docs/SECURITY.md)
-- [Database](backend/docs/DATABASE.md)
-- [Development](backend/docs/DEVELOPMENT.md)
-- [Environment](backend/docs/ENVIRONMENT.md)
-- [Integration](backend/docs/INTEGRATION.md)
-- [MiniPay findings](backend/docs/MINIPAY.md)
-- [Telegram](docs/TELEGRAM.md)
+The project uses Next.js, React, TypeScript, Node.js, Express, PostgreSQL, Prisma, Celo, Groq, Telegram, and MCP.
 
----
+Local development requires Node.js, PostgreSQL, a Celo RPC endpoint, and the relevant API/bot credentials.
 
-## 🎯 Hackathon idea in one sentence
-
-**CeloDesk turns stablecoin payments into a simple business workflow that can be controlled from the web, Telegram, or an external AI assistant — while Celo independently verifies what was actually paid.**
+Never commit real secrets such as database credentials, API keys, Telegram tokens, JWT secrets, or private keys.
 
 ---
 
-## Project
+## 🏁 In one sentence
 
-**CeloDesk**
-
-AI-powered business payments and invoicing on Celo.
-
-**Web:** CeloDesk  
-**Telegram:** CeloDesk Telegram  
-**AI integration:** CeloDesk MCP
-
-> **Ask for payment. Get paid. Know when it's paid.**
+**CeloDesk turns stablecoin payments into a simple business workflow: create an invoice, get paid directly, verify the payment on Celo, and manage everything from the web, Telegram, or AI.**
