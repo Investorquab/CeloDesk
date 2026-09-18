@@ -180,6 +180,7 @@ function renderConsentPage(params: {
       <input type="hidden" name="scope" value="${htmlEscape(params.scope)}">
       <input type="hidden" name="resource" value="${htmlEscape(params.resource)}">
       <input type="hidden" name="message" id="walletMessage">
+      <input type="hidden" name="typedData" id="walletTypedData">
       <input type="hidden" name="signature" id="walletSignature">
 
       <div style="margin:22px 0">
@@ -222,7 +223,6 @@ function renderConsentPage(params: {
       Connected service: ${htmlEscape(BASE_URL)}
     </p>
   </div>
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.min.js"></script>
 <script>
   const form = document.getElementById('consentForm');
   let signingInProgress = false;
@@ -303,22 +303,6 @@ function renderConsentPage(params: {
       }
     }
 
-    async function verifySignatureLocally(message, signature, expectedWallet) {
-      if (!window.ethers || typeof window.ethers.verifyMessage !== 'function') {
-        throw new Error('Wallet verification library is unavailable. Please refresh and try again.');
-      }
-
-      const recovered = window.ethers.verifyMessage(message, signature);
-
-      if (!recovered || recovered.toLowerCase() !== expectedWallet.toLowerCase()) {
-        throw new Error(
-          'MetaMask returned a signature from a different wallet. Please unlock MetaMask, select the correct account, and try again.',
-        );
-      }
-
-      return recovered;
-    }
-
     const ethereum = await getWalletProvider();
     if (!ethereum || typeof ethereum.request !== 'function') {
       resetSubmitButton();
@@ -340,17 +324,44 @@ function renderConsentPage(params: {
 
       const input = document.getElementById('walletAddress');
       input.value = wallet;
-      const message = 'CeloDesk MCP authorization\\nWallet: ' + wallet + '\\nClient: ' + ${JSON.stringify(params.clientId)} + '\\nRedirect: ' + ${JSON.stringify(params.redirectUri)} + '\\nState: ' + ${JSON.stringify(params.state)} + '\\nTimestamp: ' + new Date().toISOString();
-      const bytes = new TextEncoder().encode(message);
-      const hex = '0x' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+      const timestamp = new Date().toISOString();
+      const chainId = await ethereum.request({ method: 'eth_chainId' });
+      const typedData = {
+        types: {
+          Authorization: [
+            { name: 'wallet', type: 'address' },
+            { name: 'clientId', type: 'string' },
+            { name: 'redirectUri', type: 'string' },
+            { name: 'state', type: 'string' },
+            { name: 'timestamp', type: 'string' },
+          ],
+        },
+        primaryType: 'Authorization',
+        domain: {
+          name: 'CeloDesk MCP',
+          version: '1',
+          chainId,
+        },
+        message: {
+          wallet,
+          clientId: ${JSON.stringify(params.clientId)},
+          redirectUri: ${JSON.stringify(params.redirectUri)},
+          state: ${JSON.stringify(params.state)},
+          timestamp,
+        },
+      };
+
+      const message = 'CeloDesk MCP authorization\\nWallet: ' + wallet + '\\nClient: ' + ${JSON.stringify(params.clientId)} + '\\nRedirect: ' + ${JSON.stringify(params.redirectUri)} + '\\nState: ' + ${JSON.stringify(params.state)} + '\\nTimestamp: ' + timestamp;
+      const typedDataJson = JSON.stringify(typedData);
 
       const signature = await ethereum.request({
-        method: 'personal_sign',
-        params: [hex, wallet],
+        method: 'eth_signTypedData_v4',
+        params: [wallet, typedDataJson],
       });
 
-      window.__celodeskAuth = { message, signature, wallet };
-      await verifySignatureLocally(message, signature, wallet);
+      document.getElementById('walletMessage').value = message;
+      document.getElementById('walletTypedData').value = typedDataJson;
+      document.getElementById('walletSignature').value = signature;
 
       const finalAccounts = await ethereum.request({ method: 'eth_accounts' });
       const finalWallet = finalAccounts && finalAccounts[0];
@@ -358,8 +369,6 @@ function renderConsentPage(params: {
         throw new Error('The wallet changed while signing. Please try again.');
       }
 
-      document.getElementById('walletMessage').value = message;
-      document.getElementById('walletSignature').value = signature;
       form.submit();
 
     } catch (error) {
