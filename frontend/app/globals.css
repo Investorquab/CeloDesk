@@ -260,3 +260,23 @@
  .assistantActionButton{font-size:8px;padding:7px 8px;border-radius:8px}
  .assistantCreatedLabel{font-size:8px}
 }
+/* CeloDesk checkout fixes */
+.paymentOptionsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.paymentOptionsGrid .paymentOption{margin-top:0;min-width:0;height:100%}
+.paymentOptionsGrid .paymentLeft{min-width:0}
+.paymentOptionsGrid .paymentSub{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qrBox{position:relative}
+.qrBox svg{width:220px;height:220px;max-width:100%}
+.checkoutErrorActions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:18px}
+.paymentStateActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+@media(max-width:560px){
+ .paymentOptionsGrid{grid-template-columns:1fr 1fr;gap:7px}
+ .paymentOptionsGrid .paymentOption{padding:10px 8px}
+ .paymentOptionsGrid .paymentLeft{gap:7px}
+ .paymentOptionsGrid .paymentIcon{width:32px;height:32px;flex:0 0 32px}
+ .paymentOptionsGrid .paymentTitle{font-size:9px}
+ .paymentOptionsGrid .paymentSub{font-size:7px}
+ .paymentOptionsGrid .paymentArrow{font-size:18px;flex:0 0 auto}
+ .qrBox{padding:16px}
+ .qrBox svg{width:200px;height:200px;max-width:100%}
+}
