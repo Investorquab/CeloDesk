@@ -6,7 +6,7 @@
  * invoice paid directly — they can only report "a transaction hash was
  * submitted", and this engine independently checks it against the chain.
  *
- * Verification checklist (per SECURITY.md):
+ * Verification checklist:
  *  1. Transaction exists and succeeded on-chain
  *  2. Transaction is on the correct chain (Celo mainnet, 42220)
  *  3. Transaction is a Transfer of the expected ERC20 token
