@@ -237,7 +237,6 @@ export async function findRecentDirectTokenPayments(
     }
   }
 
-    }
   }
 
   const seen = new Set<string>();
