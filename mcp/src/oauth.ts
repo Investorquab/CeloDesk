@@ -646,7 +646,11 @@ export function mountOAuthRoutes(app: any): void {
           body: JSON.stringify({
             walletAddress,
             message: authMessage,
+            typedData: value(req.body.typedData) || '',
             signature: authSignature,
+            clientId,
+            redirectUri,
+            state,
           }),
         },
       );
