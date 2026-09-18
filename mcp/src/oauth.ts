@@ -240,18 +240,60 @@ function renderConsentPage(params: {
       submitButton.style.cursor = 'wait';
     }
 
-    function getWalletProvider() {
+    async function getWalletProvider() {
+      // Prefer MetaMask's EIP-6963 provider when multiple wallet
+      // extensions are installed. This avoids signing through another
+      // injected provider while the user is looking at MetaMask.
       const providers = Array.isArray(window.ethereum && window.ethereum.providers)
         ? window.ethereum.providers
         : window.ethereum
           ? [window.ethereum]
           : [];
 
-      const metaMask = providers.find(
+      const existingMetaMask = providers.find(
         (provider) => provider && provider.isMetaMask === true,
       );
 
-      return metaMask || providers[0] || null;
+      if (existingMetaMask) return existingMetaMask;
+
+      if (window.addEventListener && window.dispatchEvent) {
+        const metaMask = await new Promise((resolve) => {
+          let settled = false;
+
+          const finish = (provider) => {
+            if (settled) return;
+            settled = true;
+            window.removeEventListener('eip6963:announceProvider', onAnnounce);
+            resolve(provider || null);
+          };
+
+          const onAnnounce = (event) => {
+            const detail = event && event.detail;
+            const providerInfo = detail && detail.info;
+            const provider = detail && detail.provider;
+
+            if (
+              provider &&
+              providerInfo &&
+              (
+                providerInfo.rdns === 'io.metamask' ||
+                providerInfo.name === 'MetaMask'
+              )
+            ) {
+              finish(provider);
+            }
+          };
+
+          window.addEventListener('eip6963:announceProvider', onAnnounce);
+          window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+          setTimeout(() => finish(null), 750);
+        });
+
+        if (metaMask) return metaMask;
+      }
+
+      return providers[0] || null;
     }
 
     function resetSubmitButton() {
@@ -264,7 +306,7 @@ function renderConsentPage(params: {
       }
     }
 
-    const ethereum = getWalletProvider();
+    const ethereum = await getWalletProvider();
     if (!ethereum || typeof ethereum.request !== 'function') {
       resetSubmitButton();
       alert('Please open this authorization page in MetaMask or MiniPay so CeloDesk can verify wallet ownership.');
