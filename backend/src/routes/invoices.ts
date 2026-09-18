@@ -100,9 +100,9 @@ router.post('/:id/payment-intent', async (req, res) => {
     return res.status(400).json({ error: 'A valid payerAddress is required.' });
   }
   try {
-    const { intentId, expiresAt, invoice, token } = await createPaymentIntent(req.params.id, parsed.data.payerAddress);
+    const { intentId, expiresAt, invoice, token, paymentAmount } = await createPaymentIntent(req.params.id, parsed.data.payerAddress);
     const iface = new ethers.Interface(ERC20_TRANSFER_ABI);
-    const amountUnits = ethers.parseUnits(invoice.amount.toString(), token.decimals);
+    const amountUnits = ethers.parseUnits(paymentAmount, token.decimals);
     const baseData = iface.encodeFunctionData('transfer', [invoice.receivingWallet, amountUnits]) as `0x${string}`;
     const data = appendAttribution(baseData);
     res.json({
@@ -126,7 +126,7 @@ router.get('/:id/payment-intent', async (req, res) => {
   const payerAddress = typeof req.query.payerAddress === 'string' ? req.query.payerAddress : '';
   if (!ethers.isAddress(payerAddress)) return res.status(400).json({ error: 'payerAddress is required to create a payment intent.' });
   try {
-    const { intentId, expiresAt, invoice, token } = await createPaymentIntent(req.params.id, payerAddress);
+    const { intentId, expiresAt, invoice, token, paymentAmount } = await createPaymentIntent(req.params.id, payerAddress);
     const iface = new ethers.Interface(ERC20_TRANSFER_ABI);
     const amountUnits = ethers.parseUnits(invoice.amount.toString(), token.decimals);
     const baseData = iface.encodeFunctionData('transfer', [invoice.receivingWallet, amountUnits]) as `0x${string}`;
