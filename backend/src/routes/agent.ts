@@ -164,7 +164,8 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
     }
     case 'get_invoice': {
       const invoice = await findInvoiceForMerchant(merchantId, args);
-      return { action: 'invoice_detail', invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), tokenSymbol: invoice.tokenSymbol, description: invoice.description, status: invoice.status, dueDate: invoice.dueDate, payments: invoice.payments } };
+      const refreshed = await refreshInvoicePaymentStatus(invoice.id);
+      return { action: 'invoice_detail', invoice: { id: refreshed.id, publicSlug: refreshed.publicSlug, clientName: refreshed.clientName, amount: refreshed.amount.toString(), tokenSymbol: refreshed.tokenSymbol, description: refreshed.description, status: refreshed.status, dueDate: refreshed.dueDate, payments: refreshed.payments } };
     }
     case 'get_invoice_status': {
       const invoice = await findInvoiceForMerchant(merchantId, args);
@@ -190,7 +191,12 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
     case 'list_recent_activity': {
       const limit = Math.min(10, Math.max(1, Number(args.limit) || 6));
       const invoices = await prisma.invoice.findMany({ where: { merchantId }, orderBy: { createdAt: 'desc' }, take: limit, select: { id: true, publicSlug: true, clientName: true, amount: true, tokenSymbol: true, description: true, status: true, createdAt: true, updatedAt: true } });
-      return { action: 'recent_activity', invoices };
+      const refreshed = await Promise.all(invoices.map(async (invoice) => {
+        if (!['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status)) return invoice;
+        const current = await refreshInvoicePaymentStatus(invoice.id);
+        return { ...invoice, status: current.status, updatedAt: current.updatedAt };
+      }));
+      return { action: 'recent_activity', invoices: refreshed };
     }
     case 'get_merchant_profile': {
       const merchant = await getMerchant(merchantId);
