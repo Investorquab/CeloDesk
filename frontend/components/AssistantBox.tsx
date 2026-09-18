@@ -144,7 +144,7 @@ export default function AssistantBox({ merchantId, onInvoiceCreated }: { merchan
     const url = invoiceUrl();
     try {
       if (navigator.share) {
-        await navigator.share({ title: `CeloDesk payment request — ${created.clientName}`, text: `${money(created.amount, created.tokenSymbol)} payment request from CeloDesk.`, url });
+        await navigator.share({ title: `CeloDesk payment request - ${created.clientName}`, text: `${money(created.amount, created.tokenSymbol)} payment request from CeloDesk.`, url });
       } else {
         await navigator.clipboard.writeText(url);
         setShareState('Link copied');
