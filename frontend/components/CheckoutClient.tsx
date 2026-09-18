@@ -142,6 +142,7 @@ if(err&&!inv)return <main className="checkout"><div className="checkoutCard"><di
  const name='CeloDesk';
  const merchantName=inv.merchantDisplay?.name||shortAddress(inv.receivingWallet);
  const u=shareUrl();
+ const qrValue=paymentQrValue(inv);
  const shareText=`Payment request from ${merchantName}: ${money(inv.amount,inv.tokenSymbol)}${inv.description?` - ${inv.description}`:''}`;
  if(showSuccess){
    const txHash=verified?.txHash||tx;
