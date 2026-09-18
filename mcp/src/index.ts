@@ -336,7 +336,7 @@ function createServer() {
     'get_invoice',
     {
       title: 'Get Invoice',
-      description: 'Get a specific CeloDesk invoice owned by the merchant.',
+      description: 'Get a specific CeloDesk invoice owned by the merchant. This reads live invoice/payment state; use it when checking whether a specific invoice has been paid.',
       inputSchema: z.object({
         invoiceId: z.string().min(1),
       }),
@@ -409,7 +409,7 @@ function createServer() {
     {
       title: 'List CeloDesk Invoices',
       description:
-        'List invoices belonging to the authenticated CeloDesk merchant.',
+        'List invoices belonging to the authenticated CeloDesk merchant. For live payment status, use get_invoice_status or get_invoice; do not treat a list row's VIEWED/PENDING state as proof that no payment has arrived.',
       inputSchema: z.object({
         status: z
           .enum(['outstanding', 'all'])
