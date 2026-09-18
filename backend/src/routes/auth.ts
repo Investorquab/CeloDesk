@@ -9,6 +9,7 @@
  */
 
 import { Router } from 'express';
+import crypto from 'node:crypto';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import { ethers } from 'ethers';
@@ -148,6 +149,11 @@ router.post('/wallet', walletAuthLimiter, async (req, res) => {
 // This endpoint is intended for MCP onboarding; existing-account
 // access must still be protected by an ownership/linking flow.
 router.post('/mcp-wallet', async (req, res) => {
+  const internalToken = process.env.CELODESK_MCP_TOKEN;
+  const suppliedToken = typeof req.headers['x-celodesk-mcp-token'] === 'string' ? req.headers['x-celodesk-mcp-token'] : '';
+  if (!internalToken || suppliedToken.length !== internalToken.length || !crypto.timingSafeEqual(Buffer.from(suppliedToken), Buffer.from(internalToken))) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
   const parsed = z.object({
     walletAddress: z.string(),
     message: z.string(),
