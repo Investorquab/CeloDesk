@@ -322,6 +322,19 @@ MCP deployments additionally require the merchant-scoped configuration documente
 
 A future profile improvement will check username availability while the merchant is typing and show whether the username is available or already taken. This is planned for a later release and is not part of the current invoice/payment flow.
 
+## MiniPay testing status
+
+MiniPay checkout support is planned as a dedicated testing pass after the project is approved for MiniPay/developer access. MiniPay requires its own developer-mode test environment for the current integration workflow, so the present release keeps the standard Celo-compatible wallet payment flow as the verified path.
+
+The roadmap for the MiniPay pass is:
+
+- Detect MiniPay's injected wallet provider explicitly.
+- Use MiniPay's native wallet flow rather than assuming every wallet understands ERC-681 QR requests.
+- Test the checkout on a real MiniPay device in the approved developer environment.
+- Verify token support, wallet confirmation, payment verification, and QR/deep-link behavior end to end.
+
+Until that testing pass is completed, the invoice QR should be described as a **compatible-wallet payment QR**, not as a universal MiniPay QR.
+
 ## Demo
 
 **Live product:** https://celo-desk.vercel.app
