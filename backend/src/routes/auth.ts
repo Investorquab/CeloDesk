@@ -161,6 +161,7 @@ router.post('/mcp-wallet', async (req, res) => {
   const parsed = z.object({
     walletAddress: z.string(),
     message: z.string(),
+    typedData: z.string(),
     signature: z.string(),
   }).safeParse(req.body);
 
@@ -171,7 +172,7 @@ router.post('/mcp-wallet', async (req, res) => {
   }
 
   try {
-    const { message, signature } = parsed.data;
+    const { message, typedData, signature } = parsed.data;
     const claimedWallet = parsed.data.walletAddress.trim();
 
     console.log('[MCP AUTH DEBUG] inbound', {
@@ -182,29 +183,66 @@ router.post('/mcp-wallet', async (req, res) => {
       signatureHash: sha256(signature),
     });
 
-    // Ethereum/Celo addresses are case-insensitive. Check the raw address
-    // case-insensitively before normalizing it for storage and identity.
-    if (!message.toLowerCase().includes(claimedWallet.toLowerCase())) {
-      return res.status(401).json({ error: 'Signed message must include the wallet address.' });
+    let signedData: any;
+    try {
+      signedData = JSON.parse(typedData);
+    } catch {
+      return res.status(401).json({ error: 'Invalid wallet authorization payload.' });
+    }
+
+    if (
+      !signedData ||
+      signedData.primaryType !== 'Authorization' ||
+      !signedData.domain ||
+      !signedData.message ||
+      !signedData.message.wallet
+    ) {
+      return res.status(401).json({ error: 'Invalid wallet authorization payload.' });
+    }
+
+    if (!ethers.isAddress(claimedWallet) || !ethers.isAddress(signedData.message.wallet)) {
+      return res.status(401).json({ error: 'Invalid wallet address.' });
     }
 
     const normalizedWallet = ethers.getAddress(claimedWallet);
-    const timestampMatch = message.match(/Timestamp:\s*(\d{4}-\d{2}-\d{2}T[^\n]+)/i);
-    if (!timestampMatch) {
-      return res.status(401).json({ error: 'Signed message must include a Timestamp.' });
+
+    if (signedData.message.wallet.toLowerCase() !== normalizedWallet.toLowerCase()) {
+      return res.status(401).json({ error: 'Signed wallet does not match the claimed wallet.' });
     }
-    const signedAt = Date.parse(timestampMatch[1].trim());
+
+    if (signedData.message.clientId !== parsed.data.client_id || signedData.message.redirectUri !== parsed.data.redirect_uri || signedData.message.state !== parsed.data.state) {
+      return res.status(401).json({ error: 'Signed authorization request does not match the OAuth request.' });
+    }
+
+    const timestamp = signedData.message.timestamp;
+    const signedAt = Date.parse(timestamp);
     if (!Number.isFinite(signedAt) || Math.abs(Date.now() - signedAt) > 10 * 60 * 1000) {
       return res.status(401).json({ error: 'Authorization signature is expired or not yet valid.' });
     }
+
+    const types = {
+      Authorization: [
+        { name: 'wallet', type: 'address' },
+        { name: 'clientId', type: 'string' },
+        { name: 'redirectUri', type: 'string' },
+        { name: 'state', type: 'string' },
+        { name: 'timestamp', type: 'string' },
+      ],
+    };
+
     let recoveredAddress: string;
     try {
-      recoveredAddress = ethers.verifyMessage(message, signature);
+      recoveredAddress = ethers.verifyTypedData(
+        signedData.domain,
+        types,
+        signedData.message,
+        signature,
+      );
     } catch {
       return res.status(401).json({ error: 'Invalid wallet signature.' });
     }
+
     if (recoveredAddress.toLowerCase() !== normalizedWallet.toLowerCase()) {
-      // Safe diagnostic: log addresses only, never the signature or signed message.
       console.warn('[MCP AUTH] signature mismatch', {
         claimedWallet: normalizedWallet,
         recoveredAddress,
