@@ -35,6 +35,27 @@ function cleanTelegramText(text: string): string {
 }
 
 
+function telegramHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function invoiceStatusIcon(status: string): string {
+  const icons: Record<string, string> = {
+    DRAFT: '📝',
+    SENT: '📤',
+    VIEWED: '👀',
+    PENDING: '⏳',
+    PARTIALLY_PAID: '🟡',
+    PAID: '✅',
+    OVERPAID: '💚',
+    OVERDUE: '⚠️',
+    FAILED: '❌',
+    CANCELLED: '🚫',
+    EXPIRED: '⌛',
+  };
+  return icons[status] || '•';
+}
+
 function invoiceStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     DRAFT: 'Draft',
@@ -72,12 +93,14 @@ async function sendRecentInvoices(ctx: any, artifact: any) {
   const lines = ['📋 <b>Recent invoices</b>', '', `Showing ${shown.length} invoice${shown.length === 1 ? '' : 's'}`, ''];
 
   for (const invoice of shown) {
-    const status = invoiceStatusLabel(String(invoice.status || '')).toUpperCase();
-    const client = String(invoice.clientName || 'Unnamed client');
-    const amount = String(invoice.amount || '0');
-    const token = String(invoice.tokenSymbol || '');
+    const rawStatus = String(invoice.status || '');
+    const status = invoiceStatusLabel(rawStatus).toUpperCase();
+    const statusIcon = invoiceStatusIcon(rawStatus);
+    const client = telegramHtml(String(invoice.clientName || 'Unnamed client'));
+    const amount = telegramHtml(String(invoice.amount || '0'));
+    const token = telegramHtml(String(invoice.tokenSymbol || ''));
     const date = formatInvoiceDate(invoice.createdAt);
-    lines.push(`🧾 <b>${client}</b>`, `   💰 ${amount} ${token}  •  ${status}`, `   📅 ${date}`, '');
+    lines.push(`🧾 <b>${client}</b>`, `   💰 ${amount} ${token}  ·  ${statusIcon} ${status}`, `   📅 ${date}`, '');
   }
 
   lines.push('💡 Ask me about an invoice for more details.');
