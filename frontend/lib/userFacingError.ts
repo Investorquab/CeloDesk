@@ -5,11 +5,17 @@ export function userFacingError(error: unknown, fallback = BACKEND_UNAVAILABLE_E
   const message = error instanceof Error ? error.message : String(error ?? '');
   const normalized = message.toLowerCase();
 
+  if (normalized.includes('user rejected') || normalized.includes('user denied') || normalized.includes('request rejected') || normalized.includes('code: 4001')) return 'Payment was cancelled in your wallet.';
+
   if (
     normalized.includes('invalid or expired session token') ||
     (normalized.includes('authentication') && normalized.includes('expired')) ||
     normalized.includes('401')
   ) return ACCOUNT_SESSION_ERROR;
+
+  if (normalized.includes('403') || normalized.includes('forbidden')) return 'You do not have permission to access this account.';
+
+  if (normalized.includes('409') || normalized.includes('already been recorded')) return 'This action has already been recorded.';
 
   if (
     normalized.includes('failed to fetch') ||
