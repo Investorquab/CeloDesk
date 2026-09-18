@@ -61,32 +61,31 @@ function formatInvoiceDate(value: string | Date): string {
 async function sendRecentInvoices(ctx: any, artifact: any) {
   const invoices = Array.isArray(artifact?.invoices) ? artifact.invoices : [];
   if (!invoices.length) {
-    await ctx.reply('You do not have any invoices yet.', mainKeyboard);
+    await ctx.reply('📋 <b>No invoices yet</b>\n\nTap below to create your first invoice.', {
+      parse_mode: 'HTML',
+      ...Markup.inlineKeyboard([[Markup.button.callback('➕ Create invoice', 'create_invoice')]]),
+    });
     return;
   }
 
-  await ctx.reply('Your recent invoices', Markup.inlineKeyboard([
-    [Markup.button.callback('Create invoice', 'create_invoice')],
-  ]));
+  const shown = invoices.slice(0, 10);
+  const lines = ['📋 <b>Recent invoices</b>', '', `Showing ${shown.length} invoice${shown.length === 1 ? '' : 's'}`, ''];
 
-  for (const invoice of invoices.slice(0, 10)) {
-    const lines = [
-      'Invoice',
-      String(invoice.clientName || 'Unnamed client'),
-      '',
-      'Amount  ' + String(invoice.amount || '0') + ' ' + String(invoice.tokenSymbol || ''),
-      'Status  ' + invoiceStatusLabel(String(invoice.status || '')),
-      'Created ' + formatInvoiceDate(invoice.createdAt),
-      invoice.dueDate ? 'Due     ' + formatInvoiceDate(invoice.dueDate) : '',
-      invoice.description ? 'For     ' + String(invoice.description) : '',
-    ].filter(Boolean);
-
-    const buttons = [];
-    if (invoice.publicUrl) {
-      buttons.push(Markup.button.url('Open invoice', invoice.publicUrl));
-    }
-    await ctx.reply(lines.join('\n'), Markup.inlineKeyboard([buttons]));
+  for (const invoice of shown) {
+    const status = invoiceStatusLabel(String(invoice.status || '')).toUpperCase();
+    const client = String(invoice.clientName || 'Unnamed client');
+    const amount = String(invoice.amount || '0');
+    const token = String(invoice.tokenSymbol || '');
+    const date = formatInvoiceDate(invoice.createdAt);
+    lines.push(`🧾 <b>${client}</b>`, `   💰 ${amount} ${token}  •  ${status}`, `   📅 ${date}`, '');
   }
+
+  lines.push('💡 Ask me about an invoice for more details.');
+
+  await ctx.reply(lines.join('\n'), {
+    parse_mode: 'HTML',
+    ...Markup.inlineKeyboard([[Markup.button.callback('➕ Create invoice', 'create_invoice')]]),
+  });
 }
 
 function remember(telegramId: string, message: { role: 'user' | 'assistant'; content: string }) {
