@@ -121,7 +121,7 @@ async function requireSession(ctx: any): Promise<Session | null> {
   const telegramId = String(ctx.from.id);
   const session = sessions.get(telegramId);
   if (session) return session;
-  await ctx.reply('🔐 <b>Session inactive</b>\n\nSend /start to reconnect your Celo wallet.');
+  await sendTelegramText(ctx, '🔐 <b>Session inactive</b>\n\nSend /start to reconnect your Celo wallet.');
   return null;
 }
 
@@ -276,7 +276,7 @@ async function askAgent(ctx: any, text: string) {
     if (invoiceArtifact) await sendInvoiceArtifact(ctx, invoiceArtifact);
   } catch (err: any) {
     console.error('CeloDesk Telegram agent error:', err);
-    await ctx.reply('⚠️ <b>CeloDesk is temporarily busy</b>\n\nPlease try again in a few seconds.');
+    await sendTelegramText(ctx, '⚠️ <b>CeloDesk is temporarily busy</b>\n\nPlease try again in a few seconds.');
   }
 }
 
@@ -293,16 +293,16 @@ bot.start(async (ctx) => {
   const telegramId = String(ctx.from.id);
   const existing = sessions.get(telegramId);
   if (existing) {
-    await ctx.reply('👋 <b>Welcome back to CeloDesk</b>\n\nWhat would you like to do?', mainKeyboard);
+    await sendTelegramText(ctx, '👋 <b>Welcome back to CeloDesk</b>\n\nWhat would you like to do?');\n    await ctx.reply('What would you like to do?', mainKeyboard);
     return;
   }
 
   const knownMerchantId = await getMerchantByTelegramId(telegramId);
   awaitingWallet.add(telegramId);
   if (knownMerchantId) {
-    await ctx.reply('👋 <b>Welcome back</b>\n\n🔐 Reconnect your Celo wallet to refresh your secure session.\n\nPaste the wallet address that receives your payments.');
+    await sendTelegramText(ctx, '👋 <b>Welcome back</b>\n\n🔐 Reconnect your Celo wallet to refresh your secure session.\n\nPaste the wallet address that receives your payments.');
   } else {
-    await ctx.reply('👋 <b>Welcome to CeloDesk</b>\n\n🧾 Create invoices\n💰 Track payments\n📊 Manage your payment desk\n\n🔐 First, connect your receiving wallet by pasting its Celo address (starts with 0x).');
+    await sendTelegramText(ctx, '👋 <b>Welcome to CeloDesk</b>\n\n🧾 Create invoices\n💰 Track payments\n📊 Manage your payment desk\n\n🔐 First, connect your receiving wallet by pasting its Celo address (starts with 0x).');
   }
 });
 
@@ -324,7 +324,7 @@ bot.on('text', async (ctx) => {
 
   if (awaitingWallet.has(telegramId)) {
     if (!/^0x[a-fA-F0-9]{40}$/.test(text)) {
-      await ctx.reply('⚠️ <b>Invalid wallet address</b>\n\nA Celo wallet address should start with <code>0x</code> and contain 42 characters. Please try again.');
+      await sendTelegramText(ctx, '⚠️ <b>Invalid wallet address</b>\n\nA Celo wallet address should start with <code>0x</code> and contain 42 characters. Please try again.');
       return;
     }
     try {
@@ -336,7 +336,7 @@ bot.on('text', async (ctx) => {
       await ctx.reply('✅ <b>Wallet connected</b>\n\nYou are ready to use CeloDesk. 👋\n\nTry <b>Create an invoice</b> or <b>Who still owes me?</b>', mainKeyboard);
     } catch (err: any) {
       console.error('Telegram wallet link error:', err);
-      await ctx.reply('❌ <b>Wallet connection failed</b>\n\nPlease check the address and try again.');
+      await sendTelegramText(ctx, '❌ <b>Wallet connection failed</b>\n\nPlease check the address and try again.');
     }
     return;
   }
