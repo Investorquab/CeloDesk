@@ -120,9 +120,16 @@ export async function refreshInvoicePaymentStatus(invoiceId: string) {
         paymentAmountUnits >= remainingUnits;
     });
 
-    if (matchingCandidates.length !== 1) continue;
+    if (!matchingCandidates.length) continue;
 
-    const target = matchingCandidates[0];
+    // Direct ERC-20 transfers do not carry an invoice ID. When the merchant
+    // is explicitly checking one invoice, prefer that invoice if it is a
+    // valid match; otherwise use the most recently created matching invoice.
+    // This keeps QR payments usable while avoiding arbitrary assignment.
+    const requestedInvoice = matchingCandidates.find((candidate) => candidate.id === invoiceId);
+    const target = requestedInvoice ?? [...matchingCandidates].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    )[0];
     const expectedUnits = ethers.parseUnits(target.amount.toString(), token.decimals);
     const priorUnits = target.payments.reduce(
       (sum, payment) => sum + ethers.parseUnits(payment.amount.toString(), token.decimals),
