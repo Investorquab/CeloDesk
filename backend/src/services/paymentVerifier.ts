@@ -103,8 +103,7 @@ export async function verifyPayment(
         'No matching Transfer of the invoice token to the invoice wallet found in this transaction.',
     };
   }
-
-  const expectedAmount = ethers.parseUnits(invoice.amount, token.decimals);
+ 
 
   const currentBlock = await provider.getBlockNumber();
   const confirmations = currentBlock - receipt.blockNumber + 1;
