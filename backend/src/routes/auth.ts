@@ -163,6 +163,9 @@ router.post('/mcp-wallet', async (req, res) => {
     message: z.string(),
     typedData: z.string(),
     signature: z.string(),
+    clientId: z.string(),
+    redirectUri: z.string(),
+    state: z.string(),
   }).safeParse(req.body);
 
   if (!parsed.success) {
@@ -210,7 +213,7 @@ router.post('/mcp-wallet', async (req, res) => {
       return res.status(401).json({ error: 'Signed wallet does not match the claimed wallet.' });
     }
 
-    if (signedData.message.clientId !== parsed.data.client_id || signedData.message.redirectUri !== parsed.data.redirect_uri || signedData.message.state !== parsed.data.state) {
+    if (signedData.message.clientId !== parsed.data.clientId || signedData.message.redirectUri !== parsed.data.redirectUri || signedData.message.state !== parsed.data.state) {
       return res.status(401).json({ error: 'Signed authorization request does not match the OAuth request.' });
     }
 
