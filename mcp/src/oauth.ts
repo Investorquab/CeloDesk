@@ -240,8 +240,21 @@ function renderConsentPage(params: {
       submitButton.style.cursor = 'wait';
     }
 
-    const ethereum = window.ethereum;
-    if (!ethereum || typeof ethereum.request !== 'function') {
+    function getWalletProvider() {
+      const providers = Array.isArray(window.ethereum && window.ethereum.providers)
+        ? window.ethereum.providers
+        : window.ethereum
+          ? [window.ethereum]
+          : [];
+
+      const metaMask = providers.find(
+        (provider) => provider && provider.isMetaMask === true,
+      );
+
+      return metaMask || providers[0] || null;
+    }
+
+    function resetSubmitButton() {
       signingInProgress = false;
       if (submitButton) {
         submitButton.disabled = false;
@@ -249,30 +262,45 @@ function renderConsentPage(params: {
         submitButton.style.opacity = '1';
         submitButton.style.cursor = 'pointer';
       }
-      alert('Please open this authorization page in a browser wallet or MiniPay so CeloDesk can verify wallet ownership.');
+    }
+
+    const ethereum = getWalletProvider();
+    if (!ethereum || typeof ethereum.request !== 'function') {
+      resetSubmitButton();
+      alert('Please open this authorization page in MetaMask or MiniPay so CeloDesk can verify wallet ownership.');
       return;
     }
+
     try {
       const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
       const wallet = accounts && accounts[0];
       if (!wallet) throw new Error('No wallet account selected.');
+
+      const activeAccounts = await ethereum.request({ method: 'eth_accounts' });
+      const activeWallet = activeAccounts && activeAccounts[0];
+      if (!activeWallet) throw new Error('No active wallet account found.');
+      if (activeWallet.toLowerCase() !== wallet.toLowerCase()) {
+        throw new Error('The selected wallet changed. Please try again.');
+      }
+
       const input = document.getElementById('walletAddress');
       input.value = wallet;
       const message = 'CeloDesk MCP authorization\\nWallet: ' + wallet + '\\nClient: ' + ${JSON.stringify(params.clientId)} + '\\nRedirect: ' + ${JSON.stringify(params.redirectUri)} + '\\nState: ' + ${JSON.stringify(params.state)} + '\\nTimestamp: ' + new Date().toISOString();
       const bytes = new TextEncoder().encode(message);
       const hex = '0x' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
       const signature = await ethereum.request({ method: 'personal_sign', params: [hex, wallet] });
+
+      const finalAccounts = await ethereum.request({ method: 'eth_accounts' });
+      const finalWallet = finalAccounts && finalAccounts[0];
+      if (!finalWallet || finalWallet.toLowerCase() !== wallet.toLowerCase()) {
+        throw new Error('The wallet changed while signing. Please try again.');
+      }
+
       document.getElementById('walletMessage').value = message;
       document.getElementById('walletSignature').value = signature;
       form.submit();
     } catch (error) {
-      signingInProgress = false;
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Allow CeloDesk';
-        submitButton.style.opacity = '1';
-        submitButton.style.cursor = 'pointer';
-      }
+      resetSubmitButton();
       alert(error && error.message ? error.message : 'Wallet authorization was cancelled.');
     }
   });
