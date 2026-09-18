@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { getToken, CELO_MAINNET_CHAIN_ID } from '../celo/tokens';
 import { HACKATHON_ATTRIBUTION_TAG } from './attribution';
+import { ethers } from 'ethers';
 
 const prisma = new PrismaClient();
 
@@ -102,31 +103,45 @@ export async function listOutstandingInvoices(merchantId: string) {
   });
 }
 
+async function refreshOverdueStatuses(merchantId: string) {
+  const now = new Date();
+  await prisma.invoice.updateMany({
+    where: {
+      merchantId,
+      dueDate: { lt: now },
+      status: { in: ['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID'] },
+    },
+    data: { status: 'OVERDUE' },
+  });
+}
+
 export async function getPaymentSummary(merchantId: string) {
-  const invoices = await prisma.invoice.findMany({ where: { merchantId } });
+  await refreshOverdueStatuses(merchantId);
+  const invoices = await prisma.invoice.findMany({
+    where: { merchantId },
+    include: { payments: true },
+  });
   const byStatus = invoices.reduce<Record<string, number>>((acc, inv) => {
     acc[inv.status] = (acc[inv.status] ?? 0) + 1;
     return acc;
   }, {});
 
-  const outstandingInvoices = invoices.filter((i) =>
-    ['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE'].includes(i.status)
-  );
+  const outstandingStatuses = ['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE'];
+  const outstandingInvoices = invoices.filter((i) => outstandingStatuses.includes(i.status));
 
-  // Per-token breakdown — the correct way to show "how much is
-  // outstanding" when invoices can be in different tokens (USDC vs
-  // USDm vs NGNm are NOT interchangeable 1:1). Never sum across tokens
-  // and call it one number; that silently mixes currencies.
   const outstandingByToken = outstandingInvoices.reduce<Record<string, number>>((acc, inv) => {
-    acc[inv.tokenSymbol] = (acc[inv.tokenSymbol] ?? 0) + Number(inv.amount);
+    const decimals = getToken(inv.tokenSymbol).decimals;
+    const expected = ethers.parseUnits(inv.amount.toString(), decimals);
+    const paid = inv.payments
+      .filter((payment) => payment.status === 'VERIFIED')
+      .reduce((sum, payment) => sum + ethers.parseUnits(payment.amount.toString(), decimals), 0n);
+    const remaining = expected > paid ? expected - paid : 0n;
+    const amount = Number(ethers.formatUnits(remaining, decimals));
+    if (amount > 0) acc[inv.tokenSymbol] = (acc[inv.tokenSymbol] ?? 0) + amount;
     return acc;
   }, {});
 
-  // outstandingTotal is kept for backward compatibility with existing
-  // callers (it's a naive sum and WILL mix tokens if a merchant uses
-  // more than one) — prefer outstandingByToken for anything that
-  // displays a real number to a user. Documented in API.md.
-  const outstandingTotal = outstandingInvoices.reduce((sum, i) => sum + Number(i.amount), 0);
+  const outstandingTotal = Object.values(outstandingByToken).reduce((sum, amount) => sum + amount, 0);
 
   return { total: invoices.length, byStatus, outstandingTotal, outstandingByToken };
 }
