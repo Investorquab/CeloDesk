@@ -175,16 +175,12 @@ export async function findRecentDirectTokenPayments(
   blockTimestamp: number;
 }>> {
   const latestBlock = await provider.getBlockNumber();
-  const fromBlock = Math.max(input.minBlock ?? 0, latestBlock - (input.maxBlocks ?? 50_000));
+  const minBlock = input.minBlock ?? 0;
+  const maxBlocks = input.maxBlocks ?? 50_000;
+  const earliestBlock = Math.max(minBlock, latestBlock - maxBlocks);
+  const chunkSize = 5_000;
   const transferTopic = ethers.id('Transfer(address,address,uint256)');
   const recipientTopic = ethers.zeroPadValue(input.receivingWallet, 32);
-
-  const logs = await provider.getLogs({
-    address: input.tokenAddress,
-    fromBlock,
-    toBlock: latestBlock,
-    topics: [transferTopic, null, recipientTopic],
-  });
 
   const results: Array<{
     txHash: string;
@@ -195,7 +191,23 @@ export async function findRecentDirectTokenPayments(
     blockTimestamp: number;
   }> = [];
 
-  for (const log of [...logs].reverse()) {
+  // Some Celo RPC providers cap eth_getLogs ranges. Walk backwards in
+  // bounded chunks so reconciliation works across common RPC providers.
+  for (let toBlock = latestBlock; toBlock >= earliestBlock; toBlock -= chunkSize) {
+    const fromBlock = Math.max(earliestBlock, toBlock - chunkSize + 1);
+    let logs;
+    try {
+      logs = await provider.getLogs({
+        address: input.tokenAddress,
+        fromBlock,
+        toBlock,
+        topics: [transferTopic, null, recipientTopic],
+      });
+    } catch {
+      continue;
+    }
+
+    for (const log of [...logs].reverse()) {
     if (!log.transactionHash) continue;
 
     try {
@@ -222,6 +234,9 @@ export async function findRecentDirectTokenPayments(
       });
     } catch {
       continue;
+    }
+  }
+
     }
   }
 
