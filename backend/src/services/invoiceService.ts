@@ -170,9 +170,8 @@ export async function refreshInvoicePaymentStatus(invoiceId: string) {
   return getInvoice(invoiceId);
 }
 
-// Public checkout pages resolve by publicSlug, not the internal id —
-// these are deliberately different fields (see DATABASE.md) so the
-// internal cuid isn't the thing exposed in shareable URLs.
+// Public checkout pages resolve by publicSlug, not the internal id, so
+// shareable URLs do not expose the internal cuid.
 export async function getInvoiceBySlug(publicSlug: string) {
   return prisma.invoice.findUniqueOrThrow({
     where: { publicSlug },
