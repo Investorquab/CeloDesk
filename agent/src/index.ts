@@ -136,6 +136,7 @@ async function sendInvoiceArtifact(ctx: any, artifact: any) {
       description: invoice.description,
       dueDate: invoice.dueDate,
       publicUrl: invoice.publicUrl,
+      paymentQrValue: invoice.paymentQrValue || invoice.publicUrl,
     });
     await ctx.replyWithPhoto(Input.fromBuffer(image), {
       caption: '🧾 CeloDesk invoice · ready to share',
