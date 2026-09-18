@@ -287,9 +287,6 @@ router.post('/verify-payment', verifyPaymentLimiter, async (req, res) => {
   const expected = ethers.parseUnits(invoice.amount.toString(), decimals);
   const receivedUnits = ethers.parseUnits(result.amount, decimals);
 
-  let newStatus: 'PAID' | 'OVERPAID' | 'PARTIALLY_PAID';
-  let aggregate: bigint;
-
   try {
     // Serializable isolation prevents two simultaneous payment confirmations
     // from both calculating the invoice status from the same stale balance.
@@ -304,8 +301,8 @@ router.post('/verify-payment', verifyPaymentLimiter, async (req, res) => {
         0n,
       );
 
-      aggregate = priorUnits + receivedUnits;
-      newStatus =
+      const aggregate = priorUnits + receivedUnits;
+      const newStatus =
         aggregate > expected
           ? 'OVERPAID'
           : aggregate === expected
@@ -333,10 +330,8 @@ router.post('/verify-payment', verifyPaymentLimiter, async (req, res) => {
         data: { status: newStatus },
       });
 
-      return true;
+      return { newStatus, aggregate };
     }, { isolationLevel: 'Serializable' });
-
-    if (!committed) throw new Error('Payment transaction did not commit.');
   } catch (err: any) {
     if (err.code === 'P2002') {
       return res.status(409).json({
@@ -354,11 +349,11 @@ router.post('/verify-payment', verifyPaymentLimiter, async (req, res) => {
   const expectedDisplay = invoice.amount.toString();
   return res.json({
     verified: true,
-    invoiceStatus: newStatus,
+    invoiceStatus: committed.newStatus,
     paymentAmount: result.amount,
     invoiceAmount: expectedDisplay,
-    remainingAmount: aggregate < expected ? ethers.formatUnits(expected - aggregate, decimals) : '0',
-    overpaymentAmount: aggregate > expected ? ethers.formatUnits(aggregate - expected, decimals) : '0',
+    remainingAmount: committed.aggregate < expected ? ethers.formatUnits(expected - committed.aggregate, decimals) : '0',
+    overpaymentAmount: committed.aggregate > expected ? ethers.formatUnits(committed.aggregate - expected, decimals) : '0',
   });
 });
 
