@@ -291,3 +291,17 @@
 /* Approved bug fixes */
 .invoiceMerchantViewOnly .payerPaymentCopy{display:none}
 .activityCount{white-space:nowrap;display:inline-flex;align-items:center;min-width:max-content}
+
+/* Final mobile stability: keep the landing-page composition deterministic inside MiniPay/iPhone webviews. */
+@media(max-width:560px){
+  .hero{overflow:hidden}
+  .phoneStage{min-height:418px;overflow:visible}
+  .phone{transform:none}
+  .floatingCard{animation:none}
+  .floatA{right:0;top:34px}
+  .floatB{left:0;bottom:16px}
+  .featureRow{width:100%;grid-template-columns:1fr 1fr;}
+  .feature{min-width:0;overflow:hidden}
+  .feature div{min-width:0}
+  .feature span{overflow-wrap:anywhere}
+}
