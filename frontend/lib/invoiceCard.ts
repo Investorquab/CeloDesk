@@ -67,13 +67,12 @@ export async function renderInvoiceCard(data: InvoiceCardData): Promise<Blob>{
   text(ctx,'PAY SECURELY',1240,338,'800 14px Arial','#0b7d5a','center');
   const svg=document.querySelector('#invoice-download-qr svg') as SVGSVGElement|null;
   if(svg){const img=await svgToImage(svg);ctx.fillStyle='#fff';roundedRect(ctx,1115,365,250,250,18);ctx.fill();ctx.drawImage(img,1140,390,200,200);}
-  text(ctx,'Scan to pay',1240,665,'800 22px Arial','#10221c','center');
-  text(ctx,'or open the secure invoice link',1240,696,'15px Arial','#75847e','center');
-  text(ctx,'CeloDesk payment request',1240,755,'700 13px Arial','#0b7d5a','center');
+  text(ctx,'Scan with a compatible wallet',1240,665,'800 22px Arial','#10221c','center');
+  text(ctx,`Celo payment request · ${data.token}`,1240,700,'15px Arial','#75847e','center');
 
   // Footer.
   ctx.strokeStyle='#dfeae5';ctx.beginPath();ctx.moveTo(105,842);ctx.lineTo(1495,842);ctx.stroke();
-  text(ctx,'Thank you for your business.',105,884,'700 17px Arial','#10221c');
+  text(ctx,'We appreciate your business.',105,884,'700 17px Arial','#10221c');
   text(ctx,'One secure link · Non-custodial · Celo settlement',1495,884,'15px Arial','#75847e','right');
   return await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Could not render invoice card.')),'image/png',1));
 }
