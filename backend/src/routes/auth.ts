@@ -150,6 +150,8 @@ router.post('/wallet', walletAuthLimiter, async (req, res) => {
 router.post('/mcp-wallet', async (req, res) => {
   const parsed = z.object({
     walletAddress: z.string(),
+    message: z.string(),
+    signature: z.string(),
   }).safeParse(req.body);
 
   if (!parsed.success) {
@@ -160,6 +162,27 @@ router.post('/mcp-wallet', async (req, res) => {
 
   try {
     const normalizedWallet = ethers.getAddress(parsed.data.walletAddress);
+    const { message, signature } = parsed.data;
+    if (!message.includes(normalizedWallet)) {
+      return res.status(401).json({ error: 'Signed message must include the wallet address.' });
+    }
+    const timestampMatch = message.match(/Timestamp:\s*(\d{4}-\d{2}-\d{2}T[^\n]+)/i);
+    if (!timestampMatch) {
+      return res.status(401).json({ error: 'Signed message must include a Timestamp.' });
+    }
+    const signedAt = Date.parse(timestampMatch[1].trim());
+    if (!Number.isFinite(signedAt) || Math.abs(Date.now() - signedAt) > 10 * 60 * 1000) {
+      return res.status(401).json({ error: 'Authorization signature is expired or not yet valid.' });
+    }
+    let recoveredAddress: string;
+    try {
+      recoveredAddress = ethers.verifyMessage(message, signature);
+    } catch {
+      return res.status(401).json({ error: 'Invalid wallet signature.' });
+    }
+    if (recoveredAddress.toLowerCase() !== normalizedWallet.toLowerCase()) {
+      return res.status(401).json({ error: 'Signature does not match the claimed wallet address.' });
+    }
 
     const existing = await prisma.user.findUnique({
       where: { walletAddress: normalizedWallet },
