@@ -349,6 +349,7 @@ function renderConsentPage(params: {
         params: [hex, wallet],
       });
 
+      window.__celodeskAuth = { message, signature, wallet };
       await verifySignatureLocally(message, signature, wallet);
 
       const finalAccounts = await ethereum.request({ method: 'eth_accounts' });
