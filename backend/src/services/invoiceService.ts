@@ -82,6 +82,12 @@ export function toPublicInvoiceView(invoice: Awaited<ReturnType<typeof getInvoic
   const profile = invoice.merchant.profile;
   return {
     ...invoice,
+    payments: invoice.payments.map((payment) => ({
+      ...payment,
+      tokenSymbol: Object.values(require('../celo/tokens').CELO_TOKENS).find(
+        (token: any) => token.address.toLowerCase() === payment.tokenAddress.toLowerCase(),
+      )?.symbol ?? payment.tokenAddress,
+    })),
     merchantDisplay: {
       name: profile?.businessName ?? shortenAddress(invoice.merchant.walletAddress),
       logoUrl: profile?.logoUrl ?? null,
