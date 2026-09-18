@@ -153,7 +153,7 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
       });
       return {
         action: 'invoice_created',
-        invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), tokenSymbol: invoice.tokenSymbol, description: invoice.description, status: invoice.status, publicUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoice/${invoice.publicSlug}` },
+        invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), tokenSymbol: invoice.tokenSymbol, description: invoice.description, status: invoice.status, publicUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoice/${invoice.publicSlug}` }, paymentQrValue: `ethereum:${invoice.tokenAddress}@${invoice.chainId}/transfer?address=${invoice.receivingWallet}&uint256=${require('ethers').parseUnits(invoice.amount.toString(), require('../celo/tokens').getToken(invoice.tokenSymbol).decimals).toString()}` },
       };
     }
     case 'list_outstanding_invoices': {
