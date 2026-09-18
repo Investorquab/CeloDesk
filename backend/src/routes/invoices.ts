@@ -70,7 +70,8 @@ router.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
     if (invoice.merchantId !== req.merchantId) {
       return res.status(404).json({ error: 'Invoice not found' }); // 404, not 403 — don't confirm existence to non-owners
     }
-    res.json(toPublicInvoiceView(invoice));
+    const refreshed = await refreshInvoicePaymentStatus(invoice.id);
+    res.json(toPublicInvoiceView(refreshed));
   } catch {
     res.status(404).json({ error: 'Invoice not found' });
   }
