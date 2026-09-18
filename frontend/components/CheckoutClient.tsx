@@ -5,6 +5,7 @@ import {QRCodeSVG} from 'qrcode.react';
 import {api,Invoice,money,shortAddress} from '../lib/api';
 import {ArrowLeft,Check,Copy,Download,Share,Wallet,Qr,Clock,Alert,WhatsApp,Telegram,Gmail,Facebook} from './Icons';
 import {TELEGRAM_BOT_URL} from '../lib/telegram';
+import {userFacingError} from '../lib/userFacingError';
 import {downloadInvoiceCard,shareInvoiceFile,shareInvoiceToGmail} from '../lib/invoiceCard';
 
 function shareUrl(){return typeof window!=='undefined'?window.location.href:''}
@@ -12,8 +13,8 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
  const router=useRouter();
  const [inv,setInv]=useState<Invoice|null>(null),[err,setErr]=useState(''),[copied,setCopied]=useState(false),[payState,setPayState]=useState<'idle'|'signing'|'pending'|'success'|'failed'>('idle'),[showSuccess,setShowSuccess]=useState(false),[tx,setTx]=useState(''),[intentId,setIntentId]=useState(''),[reason,setReason]=useState(''),[sharing,setSharing]=useState(false),[shareNotice,setShareNotice]=useState('');
  const successSoundPlayedRef=useRef(false);
- useEffect(()=>{api.getInvoiceBySlug(slug).then(async x=>{const fresh=x;setInv(fresh);if(fresh.status==='PAID'&&fresh.payments?.some(p=>p.status==='VERIFIED'))setShowSuccess(true);await api.markViewed(slug).catch(()=>{})}).catch(e=>setErr(e.message))},[slug]);
- useEffect(()=>{if(!inv||payState!=='pending'||!intentId)return;let n=0;const timer=setInterval(async()=>{n++;try{const r=await api.verifyPayment(inv.id,intentId,tx);if(r.verified){setPayState('success');setShowSuccess(true);setInv(await api.getInvoiceBySlug(slug));clearInterval(timer)}else if(n>=12)setReason(r.reason||'Still waiting for confirmation.')}catch(e:any){setReason(e?.message||'Payment verification check failed.')}},5000);return()=>clearInterval(timer)},[inv,payState,tx,slug]);
+ useEffect(()=>{api.getInvoiceBySlug(slug).then(async x=>{const fresh=x;setInv(fresh);if(fresh.status==='PAID'&&fresh.payments?.some(p=>p.status==='VERIFIED'))setShowSuccess(true);await api.markViewed(slug).catch(()=>{})}).catch(e=>setErr(userFacingError(e,'We could not load this invoice. Please try again.')))},[slug]);
+ useEffect(()=>{if(!inv||payState!=='pending'||!intentId)return;let n=0;const timer=setInterval(async()=>{n++;try{const r=await api.verifyPayment(inv.id,intentId,tx);if(r.verified){setPayState('success');setShowSuccess(true);setInv(await api.getInvoiceBySlug(slug));clearInterval(timer)}else if(n>=12)setReason(r.reason||'Still waiting for confirmation.')}catch(e:any){setReason(userFacingError(e,'Payment verification check failed.'))}},5000);return()=>clearInterval(timer)},[inv,payState,tx,slug]);
  useEffect(()=>{
   if(!showSuccess||successSoundPlayedRef.current)return;
   successSoundPlayedRef.current=true;
@@ -35,7 +36,7 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
   }catch{}
  },[showSuccess]);
  const verified=inv?.payments?.find(p=>p.status==='VERIFIED');
- async function copy(){const u=shareUrl();try{await navigator.clipboard?.writeText(u);setCopied(true);setTimeout(()=>setCopied(false),1600)}catch{setErr('Could not copy the invoice link.')}}
+ async function copy(){const u=shareUrl();try{await navigator.clipboard?.writeText(u);setCopied(true);setTimeout(()=>setCopied(false),1600)}catch{setErr('Could not copy the invoice link. Please try again.')}}
  async function shareCard(text:string){if(!inv)return;try{const result=await shareInvoiceFile({businessName:inv.merchantDisplay?.name||'CeloDesk',amount:String(inv.amount),token:inv.tokenSymbol,description:inv.description||'Payment request',client:inv.clientName,due:inv.dueDate?new Date(inv.dueDate).toLocaleDateString():'',url:shareUrl()},text);setShareNotice(result==='shared'?'Invoice card shared.':'Invoice card copied — paste it where you want to share it.');setTimeout(()=>setShareNotice(''),2400)}catch(e:any){setErr(e?.message||'Could not share invoice card.')}}
  async function pay(){
   if(!inv)return;
