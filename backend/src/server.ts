@@ -10,12 +10,22 @@ import { router as merchantRouter } from './routes/merchants';
 import { router as agentRouter } from './routes/agent';
 
 const app = express();
-// CORS is open (all origins) for hackathon dev speed — this already
-// answers Claude 2's question 4: yes, browser calls from any origin,
-// including the frontend's dev server, are accepted right now. Tighten
-// to an explicit allowlist (process.env.APP_URL) before any real deploy
-// — see SECURITY.md.
-app.use(cors());
+const allowedOrigins = new Set(
+  [
+    process.env.FRONTEND_URL,
+    'https://celo-desk.vercel.app',
+    'http://localhost:3000',
+  ].filter((origin): origin is string => Boolean(origin)),
+);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+      return callback(new Error('Origin not allowed by CeloDesk CORS policy.'));
+    },
+  }),
+);
 app.use(express.json());
 
 app.use('/api/invoices', invoiceRouter);
