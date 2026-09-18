@@ -124,6 +124,125 @@ async function backendFetch(
   return data;
 }
 
+
+function invoiceStatusEmoji(status: unknown): string {
+  switch (String(status || '').toUpperCase()) {
+    case 'DRAFT': return '📝';
+    case 'SENT': return '📤';
+    case 'VIEWED': return '👀';
+    case 'PENDING': return '⏳';
+    case 'PARTIALLY_PAID': return '🟡';
+    case 'PAID': return '✅';
+    case 'OVERPAID': return '💚';
+    case 'OVERDUE': return '⚠️';
+    case 'FAILED': return '❌';
+    case 'CANCELLED': return '🚫';
+    case 'EXPIRED': return '⌛';
+    default: return '•';
+  }
+}
+
+function formatInvoice(invoice: any, detailed = false): string {
+  const lines = [
+    `🧾 <b>${invoice.clientName || 'Invoice'}</b>`,
+    `💰 <b>Amount:</b> ${invoice.amount ?? '—'} ${invoice.tokenSymbol ?? ''}`,
+    `${invoiceStatusEmoji(invoice.status)} <b>Status:</b> ${invoice.status ?? '—'}`,
+  ];
+
+  if (invoice.description) lines.push(`📝 <b>Description:</b> ${invoice.description}`);
+  if (invoice.dueDate) lines.push(`📅 <b>Due:</b> ${invoice.dueDate}`);
+  if (invoice.id) lines.push(`🆔 <b>Invoice ID:</b> ${invoice.id}`);
+  if (invoice.publicUrl) lines.push(`🔗 <b>Payment link:</b> ${invoice.publicUrl}`);
+
+  if (detailed && Array.isArray(invoice.payments) && invoice.payments.length) {
+    lines.push('', '💳 <b>Payments</b>');
+    for (const payment of invoice.payments) {
+      lines.push(
+        `• ${payment.amount ?? '—'} ${payment.tokenSymbol ?? ''} · ${payment.status ?? '—'}` +
+        (payment.txHash ? ` · ${payment.txHash}` : ''),
+      );
+    }
+  }
+
+  return lines.join('\\n');
+}
+
+function formatMcpResult(toolName: string, result: any): string {
+  if (toolName === 'create_invoice') {
+    return [
+      '🎉 <b>Invoice created successfully</b>',
+      '',
+      formatInvoice(result, true),
+      '',
+      '💡 Share the payment link with your client to collect payment.',
+    ].join('\\n');
+  }
+
+  if (toolName === 'get_invoice') {
+    return ['📄 <b>Invoice details</b>', '', formatInvoice(result, true)].join('\\n');
+  }
+
+  if (toolName === 'get_invoice_status') {
+    return [
+      '🔎 <b>Invoice status</b>',
+      '',
+      `${invoiceStatusEmoji(result?.status)} <b>Status:</b> ${result?.status ?? 'Unknown'}`,
+    ].join('\\n');
+  }
+
+  if (toolName === 'list_invoices') {
+    const invoices = Array.isArray(result) ? result : [];
+    if (!invoices.length) {
+      return '📋 <b>Invoices</b>\\n\\n🎉 No invoices found.';
+    }
+
+    return [
+      `📋 <b>Invoices</b> · ${invoices.length} total`,
+      '',
+      ...invoices.map((invoice: any) => formatInvoice(invoice)),
+    ].join('\\n\\n');
+  }
+
+  if (toolName === 'get_payment_summary') {
+    const byStatus = result?.byStatus || {};
+    const outstandingByToken = result?.outstandingByToken || {};
+    const statusLines = Object.entries(byStatus)
+      .map(([status, count]) => `${invoiceStatusEmoji(status)} ${status}: ${count}`);
+    const outstandingLines = Object.entries(outstandingByToken)
+      .map(([token, amount]) => `• ${amount} ${token}`);
+
+    return [
+      '📊 <b>Payment summary</b>',
+      '',
+      `🧾 <b>Total invoices:</b> ${result?.total ?? 0}`,
+      ...(statusLines.length ? ['', ...statusLines] : []),
+      '',
+      '💸 <b>Outstanding</b>',
+      ...(outstandingLines.length ? outstandingLines : ['🎉 Nothing outstanding.']),
+    ].join('\\n');
+  }
+
+  if (toolName === 'get_merchant_profile') {
+    return [
+      '👤 <b>Merchant profile</b>',
+      '',
+      `🏪 <b>Business:</b> ${result?.businessName || result?.profile?.businessName || 'Not set'}`,
+      `💼 <b>Wallet:</b> ${result?.walletAddress || '—'}`,
+      ...(result?.tagline ? [`✨ <b>Tagline:</b> ${result.tagline}`] : []),
+      ...(result?.websiteUrl ? [`🌐 <b>Website:</b> ${result.websiteUrl}`] : []),
+    ].join('\\n');
+  }
+
+  return typeof result === 'string'
+    ? result
+    : JSON.stringify(result, null, 2);
+}
+
+function formatMcpError(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : fallback;
+  return `⚠️ <b>Something went wrong</b>\\n\\n${message}\\n\\n💡 Please try again shortly.`;
+}
+
 function createServer() {
   const server = new McpServer({
     name: 'CeloDesk',
@@ -174,9 +293,8 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text: JSON.stringify({
+              text: formatMcpResult('create_invoice', {
                 success: true,
-                message: 'Invoice created successfully.',
                 invoiceId: result.id,
                 publicUrl: result.publicUrl,
                 status: result.status,
@@ -195,10 +313,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text:
-                error instanceof Error
-                  ? error.message
-                  : 'Unable to create invoice.',
+              text: formatMcpError(error, 'Unable to create invoice.'),
             },
           ],
         };
@@ -223,7 +338,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result),
+              text: formatMcpResult('get_invoice', result),
             },
           ],
         };
@@ -233,10 +348,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text:
-                error instanceof Error
-                  ? error.message
-                  : 'Unable to get invoice.',
+              text: formatMcpError(error, 'Unable to get invoice.'),
             },
           ],
         };
@@ -263,7 +375,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result),
+              text: formatMcpResult('get_invoice_status', result),
             },
           ],
         };
@@ -273,10 +385,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text:
-                error instanceof Error
-                  ? error.message
-                  : 'Unable to get invoice status.',
+              text: formatMcpError(error, 'Unable to get invoice status.'),
             },
           ],
         };
@@ -310,7 +419,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result),
+              text: formatMcpResult('list_invoices', result),
             },
           ],
         };
@@ -320,10 +429,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text:
-                error instanceof Error
-                  ? error.message
-                  : 'Unable to list invoices.',
+              text: formatMcpError(error, 'Unable to list invoices.'),
             },
           ],
         };
@@ -349,7 +455,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result),
+              text: formatMcpResult('get_payment_summary', result),
             },
           ],
         };
@@ -359,10 +465,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text:
-                error instanceof Error
-                  ? error.message
-                  : 'Unable to get payment summary.',
+              text: formatMcpError(error, 'Unable to get payment summary.'),
             },
           ],
         };
@@ -387,7 +490,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result),
+              text: formatMcpResult('get_merchant_profile', result),
             },
           ],
         };
@@ -397,10 +500,7 @@ function createServer() {
           content: [
             {
               type: 'text',
-              text:
-                error instanceof Error
-                  ? error.message
-                  : 'Unable to get merchant profile.',
+              text: formatMcpError(error, 'Unable to get merchant profile.'),
             },
           ],
         };
