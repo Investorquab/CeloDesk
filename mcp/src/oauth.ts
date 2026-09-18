@@ -328,6 +328,11 @@ function renderConsentPage(params: {
       const chainId = await ethereum.request({ method: 'eth_chainId' });
       const typedData = {
         types: {
+          EIP712Domain: [
+            { name: 'name', type: 'string' },
+            { name: 'version', type: 'string' },
+            { name: 'chainId', type: 'uint256' },
+          ],
           Authorization: [
             { name: 'wallet', type: 'address' },
             { name: 'clientId', type: 'string' },
@@ -340,7 +345,7 @@ function renderConsentPage(params: {
         domain: {
           name: 'CeloDesk MCP',
           version: '1',
-          chainId,
+          chainId: Number.parseInt(chainId, 16),
         },
         message: {
           wallet,
