@@ -287,10 +287,12 @@ router.post('/verify-payment', verifyPaymentLimiter, async (req, res) => {
   const expected = ethers.parseUnits(invoice.amount.toString(), decimals);
   const receivedUnits = ethers.parseUnits(result.amount, decimals);
 
+  let committed: { newStatus: string; aggregate: bigint };
+
   try {
     // Serializable isolation prevents two simultaneous payment confirmations
     // from both calculating the invoice status from the same stale balance.
-    const committed = await prisma.$transaction(async (tx) => {
+    committed = await prisma.$transaction(async (tx) => {
       const existingVerified = await tx.payment.findMany({
         where: { invoiceId: invoice.id, status: 'VERIFIED' },
         select: { amount: true },
