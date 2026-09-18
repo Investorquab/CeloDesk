@@ -6,7 +6,6 @@ import AppNav from '../../../components/AppNav';
 import {ArrowLeft,Receipt,Plus,Search,Trash,Check,MoreVertical,Share} from '../../../components/Icons';
 import {StatusBadge} from '../../../components/StatusBadge';
 import {userFacingError} from '../../../lib/userFacingError';
-import {userFacingError} from '../../../lib/userFacingError';
 
 export default function Page({searchParams}:{searchParams:{merchantId?:string}}){
  const merchantId=searchParams.merchantId||'';
