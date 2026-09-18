@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { ethers } from 'ethers';
 
 const BASE_URL = 'https://mcp.185-7-81-139.sslip.io';
 const RESOURCE_URL = `${BASE_URL}/mcp`;
@@ -168,13 +169,15 @@ function renderConsentPage(params: {
       to create and manage your business payment invoices.
     </p>
 
-    <form method="POST" action="/authorize">
+    <form id="consentForm" method="POST" action="/authorize">
       <input type="hidden" name="client_id" value="${htmlEscape(params.clientId)}">
       <input type="hidden" name="redirect_uri" value="${htmlEscape(params.redirectUri)}">
       <input type="hidden" name="state" value="${htmlEscape(params.state)}">
       <input type="hidden" name="code_challenge" value="${htmlEscape(params.codeChallenge)}">
       <input type="hidden" name="scope" value="${htmlEscape(params.scope)}">
       <input type="hidden" name="resource" value="${htmlEscape(params.resource)}">
+      <input type="hidden" name="message" id="walletMessage">
+      <input type="hidden" name="signature" id="walletSignature">
 
       <div style="margin:22px 0">
         <label
@@ -216,6 +219,33 @@ function renderConsentPage(params: {
       Connected service: ${htmlEscape(BASE_URL)}
     </p>
   </div>
+<script>
+  const form = document.getElementById('consentForm');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const ethereum = window.ethereum;
+    if (!ethereum || typeof ethereum.request !== 'function') {
+      alert('Please open this authorization page in a browser wallet or MiniPay so CeloDesk can verify wallet ownership.');
+      return;
+    }
+    try {
+      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      const wallet = accounts && accounts[0];
+      if (!wallet) throw new Error('No wallet account selected.');
+      const input = document.getElementById('walletAddress');
+      input.value = wallet;
+      const message = 'CeloDesk MCP authorization\\nWallet: ' + wallet + '\\nClient: ' + ${JSON.stringify(params.clientId)} + '\\nRedirect: ' + ${JSON.stringify(params.redirectUri)} + '\\nState: ' + ${JSON.stringify(params.state)} + '\\nTimestamp: ' + new Date().toISOString();
+      const bytes = new TextEncoder().encode(message);
+      const hex = '0x' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+      const signature = await ethereum.request({ method: 'personal_sign', params: [hex, wallet] });
+      document.getElementById('walletMessage').value = message;
+      document.getElementById('walletSignature').value = signature;
+      form.submit();
+    } catch (error) {
+      alert(error && error.message ? error.message : 'Wallet authorization was cancelled.');
+    }
+  });
+</script>
 </body>
 </html>`;
 }
@@ -467,6 +497,8 @@ export function mountOAuthRoutes(app: any): void {
           },
           body: JSON.stringify({
             walletAddress,
+            message: value(req.body.message) || '',
+            signature: value(req.body.signature) || '',
           }),
         },
       );
