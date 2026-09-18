@@ -195,9 +195,8 @@ router.get('/summary/:merchantId', requireAuth, async (req: AuthedRequest, res) 
   res.json(await getPaymentSummary(req.params.merchantId));
 });
 
-// POST /api/payments/verify — the ONLY way an invoice can become PAID.
-// Client-reported "success" is never trusted; this independently checks
-// the chain. See SECURITY.md and paymentVerifier.ts.
+// POST /api/payments/verify — the payment verification path. Client-reported
+// success is never trusted; the backend independently checks the chain.
 const verifySchema = z.object({
   invoiceId: z.string(),
   intentId: z.string(),
