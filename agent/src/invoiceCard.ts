@@ -60,15 +60,14 @@ export async function renderTelegramInvoiceCard(data: TelegramInvoiceCard): Prom
 
     <rect x="1015" y="315" width="390" height="500" rx="32" fill="#f4faf7" stroke="#d4e6dd" stroke-width="2"/>
     <text x="1210" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="800" fill="#0b7d5a">SCAN TO PAY</text>
-    <rect x="1085" y="395" width="250" height="250" rx="20" fill="#ffffff"/>
-    <image href="${qrData}" x="1105" y="415" width="210" height="210"/>
-    <text x="1210" y="690" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="800" fill="#10221c">Open your secure invoice</text>
-    <text x="1210" y="725" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#71837b">${esc(data.publicUrl.length > 48 ? data.publicUrl.slice(0, 48) + '…' : data.publicUrl)}</text>
-    <rect x="1090" y="755" width="240" height="38" rx="19" fill="url(#accent)"/>
-    <text x="1210" y="780" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="800" fill="#062118">PAY SECURELY</text>
+    <rect x="1060" y="395" width="300" height="300" rx="20" fill="#ffffff"/>
+    <image href="${qrData}" x="1080" y="415" width="260" height="260"/>
+    <text x="1210" y="735" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="800" fill="#10221c">Scan with a compatible wallet</text>
+    <text x="1210" y="765" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#71837b">Celo payment request · ${esc(data.tokenSymbol)}</text>
+    <text x="1210" y="795" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#8a9892">Or use the Open invoice button below</text>
 
     <line x1="105" y1="855" x2="1450" y2="855" stroke="#dce9e3" stroke-width="2"/>
-    <text x="105" y="895" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#10221c">Thank you for your business.</text>
+    <text x="105" y="895" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#10221c">We appreciate your business.</text>
     <text x="1450" y="895" text-anchor="end" font-family="Arial, sans-serif" font-size="15" fill="#71837b">One secure link · Celo settlement · CeloDesk</text>
   </svg>`;
 
