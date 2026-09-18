@@ -223,6 +223,7 @@ function renderConsentPage(params: {
     </p>
   </div>
 <script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.min.js"></script>
   const form = document.getElementById('consentForm');
   let signingInProgress = false;
 
@@ -241,59 +242,43 @@ function renderConsentPage(params: {
     }
 
     async function getWalletProvider() {
-      // Prefer MetaMask's EIP-6963 provider when multiple wallet
-      // extensions are installed. This avoids signing through another
-      // injected provider while the user is looking at MetaMask.
-      const providers = Array.isArray(window.ethereum && window.ethereum.providers)
-        ? window.ethereum.providers
-        : window.ethereum
-          ? [window.ethereum]
-          : [];
+      const candidates = [];
+      const seen = new Set();
 
-      const existingMetaMask = providers.find(
-        (provider) => provider && provider.isMetaMask === true,
-      );
+      const addProvider = (provider) => {
+        if (!provider || typeof provider.request !== 'function' || seen.has(provider)) return;
+        seen.add(provider);
+        candidates.push(provider);
+      };
 
-      if (existingMetaMask) return existingMetaMask;
+      if (Array.isArray(window.ethereum && window.ethereum.providers)) {
+        window.ethereum.providers.forEach(addProvider);
+      }
+      addProvider(window.ethereum);
 
+      // Discover every injected provider so we can select MetaMask explicitly.
       if (window.addEventListener && window.dispatchEvent) {
-        const metaMask = await new Promise((resolve) => {
+        await new Promise((resolve) => {
           let settled = false;
-
-          const finish = (provider) => {
+          const finish = () => {
             if (settled) return;
             settled = true;
             window.removeEventListener('eip6963:announceProvider', onAnnounce);
-            resolve(provider || null);
+            resolve();
           };
-
           const onAnnounce = (event) => {
             const detail = event && event.detail;
-            const providerInfo = detail && detail.info;
-            const provider = detail && detail.provider;
-
-            if (
-              provider &&
-              providerInfo &&
-              (
-                providerInfo.rdns === 'io.metamask' ||
-                providerInfo.name === 'MetaMask'
-              )
-            ) {
-              finish(provider);
-            }
+            if (detail && detail.provider) addProvider(detail.provider);
           };
-
           window.addEventListener('eip6963:announceProvider', onAnnounce);
           window.dispatchEvent(new Event('eip6963:requestProvider'));
-
-          setTimeout(() => finish(null), 750);
+          setTimeout(finish, 500);
         });
-
-        if (metaMask) return metaMask;
       }
 
-      return providers[0] || null;
+      return candidates.find((provider) => provider.isMetaMask === true)
+        || candidates[0]
+        || null;
     }
 
     function resetSubmitButton() {
@@ -304,6 +289,22 @@ function renderConsentPage(params: {
         submitButton.style.opacity = '1';
         submitButton.style.cursor = 'pointer';
       }
+    }
+
+    async function verifySignatureLocally(message, signature, expectedWallet) {
+      if (!window.ethers || typeof window.ethers.verifyMessage !== 'function') {
+        throw new Error('Wallet verification library is unavailable. Please refresh and try again.');
+      }
+
+      const recovered = window.ethers.verifyMessage(message, signature);
+
+      if (!recovered || recovered.toLowerCase() !== expectedWallet.toLowerCase()) {
+        throw new Error(
+          'MetaMask returned a signature from a different wallet. Please unlock MetaMask, select the correct account, and try again.',
+        );
+      }
+
+      return recovered;
     }
 
     const ethereum = await getWalletProvider();
@@ -330,7 +331,13 @@ function renderConsentPage(params: {
       const message = 'CeloDesk MCP authorization\\nWallet: ' + wallet + '\\nClient: ' + ${JSON.stringify(params.clientId)} + '\\nRedirect: ' + ${JSON.stringify(params.redirectUri)} + '\\nState: ' + ${JSON.stringify(params.state)} + '\\nTimestamp: ' + new Date().toISOString();
       const bytes = new TextEncoder().encode(message);
       const hex = '0x' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-      const signature = await ethereum.request({ method: 'personal_sign', params: [hex, wallet] });
+
+      const signature = await ethereum.request({
+        method: 'personal_sign',
+        params: [hex, wallet],
+      });
+
+      await verifySignatureLocally(message, signature, wallet);
 
       const finalAccounts = await ethereum.request({ method: 'eth_accounts' });
       const finalWallet = finalAccounts && finalAccounts[0];
@@ -341,6 +348,7 @@ function renderConsentPage(params: {
       document.getElementById('walletMessage').value = message;
       document.getElementById('walletSignature').value = signature;
       form.submit();
+
     } catch (error) {
       resetSubmitButton();
       alert(error && error.message ? error.message : 'Wallet authorization was cancelled.');
