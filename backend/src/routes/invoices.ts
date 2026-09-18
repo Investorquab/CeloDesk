@@ -414,7 +414,7 @@ router.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
 // Loose limiter for view-tracking — this is public and hit by every
 // checkout page load, so it needs to be generous (unlike the stricter
 // wallet-auth/payment-verify limiters), but still bounded against
-// abuse per SECURITY.md's rate-limiting audit item.
+// abuse; verification attempts are rate-limited to protect the endpoint.
 const viewLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   limit: 60,
