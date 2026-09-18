@@ -44,8 +44,8 @@ const updateProfileSchema = z.object({
 // PATCH /api/merchants/:id
 // Auth-gated + ownership-checked: the authenticated wallet's merchantId
 // (from the JWT, see requireAuth) must match the profile being edited.
-// merchantId in the URL is no longer trusted on its own — see
-// SECURITY.md for why this matters (IDOR protection).
+// merchantId in the URL is no longer trusted on its own; ownership is
+// checked against the authenticated merchant session.
 router.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (req.merchantId !== req.params.id) {
     return res.status(403).json({ error: "You can only edit your own profile." });
