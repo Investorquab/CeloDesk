@@ -38,10 +38,8 @@ const createInvoiceSchema = z.object({
 
 // POST /api/invoices — create a draft invoice
 // Auth-gated: merchantId is taken from the authenticated wallet's JWT,
-// NOT from the request body — a client-supplied merchantId in the body
-// is accepted for backward compatibility but ignored for authorization
-// (see SECURITY.md's IDOR section). This is what actually decides who
-// the invoice belongs to.
+// not from the request body. A client-supplied merchantId may remain in
+// the request for compatibility, but it does not control ownership.
 router.post('/', requireAuth, async (req: AuthedRequest, res) => {
   const parsed = createInvoiceSchema.safeParse(req.body);
   if (!parsed.success) {
