@@ -4,8 +4,6 @@ import { requireAuth, AuthedRequest } from '../middleware/auth';
 import { createInvoice, getInvoice, listOutstandingInvoices, getPaymentSummary, refreshInvoicePaymentStatus } from '../services/invoiceService';
 import { getMerchant } from '../services/merchantService';
 import { PrismaClient } from '@prisma/client';
-import { ethers } from 'ethers';
-import { getToken } from '../celo/tokens';
 
 const prisma = new PrismaClient();
 export const router = Router();
@@ -155,7 +153,7 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
       });
       return {
         action: 'invoice_created',
-        invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), tokenSymbol: invoice.tokenSymbol, description: invoice.description, status: invoice.status, publicUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoice/${invoice.publicSlug}`, paymentQrValue: `ethereum:${invoice.tokenAddress}@${invoice.chainId}/transfer?address=${invoice.receivingWallet}&uint256=${ethers.parseUnits(invoice.amount.toString(), getToken(invoice.tokenSymbol).decimals).toString()}` },
+        invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), tokenSymbol: invoice.tokenSymbol, description: invoice.description, status: invoice.status, publicUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoice/${invoice.publicSlug}`, paymentQrValue: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoice/${invoice.publicSlug}` },
       };
     }
     case 'list_outstanding_invoices': {
