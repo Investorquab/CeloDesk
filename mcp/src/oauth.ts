@@ -245,18 +245,20 @@ function renderConsentPage(params: {
       const candidates = [];
       const seen = new Set();
 
-      const addProvider = (provider) => {
+      const addProvider = (provider, info) => {
         if (!provider || typeof provider.request !== 'function' || seen.has(provider)) return;
         seen.add(provider);
-        candidates.push(provider);
+        candidates.push({ provider, info: info || null });
       };
 
       if (Array.isArray(window.ethereum && window.ethereum.providers)) {
-        window.ethereum.providers.forEach(addProvider);
+        window.ethereum.providers.forEach((provider) => addProvider(provider));
       }
       addProvider(window.ethereum);
 
-      // Discover every injected provider so we can select MetaMask explicitly.
+      // Discover injected wallets with EIP-6963. Prefer MetaMask by its
+      // standardized rdns identifier so another wallet cannot impersonate
+      // the legacy isMetaMask flag.
       if (window.addEventListener && window.dispatchEvent) {
         await new Promise((resolve) => {
           let settled = false;
@@ -268,7 +270,9 @@ function renderConsentPage(params: {
           };
           const onAnnounce = (event) => {
             const detail = event && event.detail;
-            if (detail && detail.provider) addProvider(detail.provider);
+            if (detail && detail.provider) {
+              addProvider(detail.provider, detail.info);
+            }
           };
           window.addEventListener('eip6963:announceProvider', onAnnounce);
           window.dispatchEvent(new Event('eip6963:requestProvider'));
@@ -276,9 +280,17 @@ function renderConsentPage(params: {
         });
       }
 
-      return candidates.find((provider) => provider.isMetaMask === true)
-        || candidates[0]
-        || null;
+      const metamask = candidates.find(({ provider, info }) =>
+        info && info.rdns === 'io.metamask'
+      );
+      if (metamask) return metamask.provider;
+
+      const legacyMetaMask = candidates.find(
+        ({ provider }) => provider.isMetaMask === true,
+      );
+      if (legacyMetaMask) return legacyMetaMask.provider;
+
+      return candidates[0] ? candidates[0].provider : null;
     }
 
     function resetSubmitButton() {
