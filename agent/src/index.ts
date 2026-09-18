@@ -143,7 +143,7 @@ async function sendInvoiceArtifact(ctx: any, artifact: any) {
     });
   } catch (err) {
     console.error('Telegram invoice card render failed:', err);
-    await ctx.reply('✅ <b>Your invoice is ready</b>:', Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]));
+    await ctx.reply('✅ <b>Your invoice is ready</b>:', { parse_mode: 'HTML', ...Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]) });
   }
 }
 
@@ -293,7 +293,7 @@ bot.start(async (ctx) => {
   const telegramId = String(ctx.from.id);
   const existing = sessions.get(telegramId);
   if (existing) {
-    await sendTelegramText(ctx, '👋 <b>Welcome back to CeloDesk</b>\n\nWhat would you like to do?');\n    await ctx.reply('What would you like to do?', mainKeyboard);
+    await ctx.reply('👋 <b>Welcome back to CeloDesk</b>\n\nWhat would you like to do?', { parse_mode: 'HTML', ...mainKeyboard });
     return;
   }
 
@@ -333,7 +333,7 @@ bot.on('text', async (ctx) => {
       sessions.set(telegramId, { merchantId: result.merchantId, token: result.token });
       histories.delete(telegramId);
       awaitingWallet.delete(telegramId);
-      await ctx.reply('✅ <b>Wallet connected</b>\n\nYou are ready to use CeloDesk. 👋\n\nTry <b>Create an invoice</b> or <b>Who still owes me?</b>', mainKeyboard);
+      await ctx.reply('✅ <b>Wallet connected</b>\n\nYou are ready to use CeloDesk. 👋\n\nTry <b>Create an invoice</b> or <b>Who still owes me?</b>', { parse_mode: 'HTML', ...mainKeyboard });
     } catch (err: any) {
       console.error('Telegram wallet link error:', err);
       await sendTelegramText(ctx, '❌ <b>Wallet connection failed</b>\n\nPlease check the address and try again.');
