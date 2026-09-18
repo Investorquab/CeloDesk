@@ -6,16 +6,10 @@ export interface AuthedRequest extends Request {
 }
 
 /**
- * Verifies the Authorization: Bearer <token> header (issued by
- * POST /api/auth/wallet) and attaches req.merchantId.
- *
- * NOT YET APPLIED to any route — adding it here first so it exists and
- * is testable, without breaking the golden path Claude 2 already built
- * against (which currently passes merchantId directly, per the
- * documented stopgap in CLAUDE_2_FRONTEND.md/INTEGRATION.md). Wire this
- * into invoice-mutating routes once Claude 2/3 are ready to switch over
- * — coordinate the cutover, don't flip it unannounced (see
- * INTEGRATION.md's rule on this).
+ * Verifies the Authorization: Bearer <token> header issued by CeloDesk
+ * wallet/Telegram authentication and attaches the authenticated merchantId.
+ * Protected merchant routes use this middleware so ownership is derived
+ * from the signed session rather than a client-supplied merchantId.
  */
 export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
