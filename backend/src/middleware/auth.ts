@@ -32,6 +32,6 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
     req.merchantId = payload.merchantId;
     next();
   } catch {
-    return res.status(401).json({ error: 'Invalid or expired session token.' });
+    return res.status(401).json({ error: 'Your CeloDesk session has expired. Please reconnect your wallet and try again.' });
   }
 }
