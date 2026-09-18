@@ -128,7 +128,7 @@ router.get('/:id/payment-intent', async (req, res) => {
   try {
     const { intentId, expiresAt, invoice, token, paymentAmount } = await createPaymentIntent(req.params.id, payerAddress);
     const iface = new ethers.Interface(ERC20_TRANSFER_ABI);
-    const amountUnits = ethers.parseUnits(invoice.amount.toString(), token.decimals);
+    const amountUnits = ethers.parseUnits(paymentAmount, token.decimals);
     const baseData = iface.encodeFunctionData('transfer', [invoice.receivingWallet, amountUnits]) as `0x${string}`;
     res.json({
       intentId,
