@@ -62,9 +62,9 @@ export async function renderTelegramInvoiceCard(data: TelegramInvoiceCard): Prom
     <text x="1210" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="800" fill="#0b7d5a">SCAN TO PAY</text>
     <rect x="1060" y="395" width="300" height="300" rx="20" fill="#ffffff"/>
     <image href="${qrData}" x="1080" y="415" width="260" height="260"/>
-    <text x="1210" y="735" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="800" fill="#10221c">Scan with a compatible wallet</text>
-    <text x="1210" y="765" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#71837b">Celo payment request · ${esc(data.tokenSymbol)}</text>
-    <text x="1210" y="795" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#8a9892">Or use the Open invoice button below</text>
+    <text x="1210" y="735" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="800" fill="#10221c">Scan to open the secure invoice</text>
+    <text x="1210" y="765" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#71837b">Open the invoice and pay with your connected wallet</text>
+    <text x="1210" y="795" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#8a9892">Or tap the Open invoice button below</text>
 
     <line x1="105" y1="855" x2="1450" y2="855" stroke="#dce9e3" stroke-width="2"/>
     <text x="105" y="895" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#10221c">We appreciate your business.</text>
