@@ -280,3 +280,14 @@
  .qrBox{padding:16px}
  .qrBox svg{width:200px;height:200px;max-width:100%}
 }
+
+/* CeloDesk account-error polish */
+.accountErrorPanel{padding:16px 18px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;color:var(--text);background:#fff;border:1px solid #efcfcf}
+.accountErrorPanel strong{display:block;font-family:Manrope;font-size:13px}
+.accountErrorPanel p{margin:5px 0 0;font-size:11px;color:var(--muted)}
+.accountErrorActions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex:none}
+.accountErrorActions .btn{padding:10px 12px;font-size:11px}
+@media(max-width:560px){.accountErrorPanel{align-items:stretch;flex-direction:column}.accountErrorActions{justify-content:stretch}.accountErrorActions .btn{flex:1}}
+/* Approved bug fixes */
+.invoiceMerchantViewOnly .payerPaymentCopy{display:none}
+.activityCount{white-space:nowrap;display:inline-flex;align-items:center;min-width:max-content}
