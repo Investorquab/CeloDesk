@@ -10,7 +10,8 @@
     "render:pro": "remotion render src/index.ts CeloDeskDemo out/celodesk-demo.mp4 --codec=h264 --crf=18"
   },
   "dependencies": {
-    "remotion": "^4.0.0",
+    "@remotion/cli": "^4.0.526",
+    "remotion": "^4.0.526",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
