@@ -75,10 +75,9 @@ router.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
   }
 });
 
-// GET /api/invoices/by-slug/:slug — what the public checkout page (Claude 2)
-// actually resolves against. publicSlug is deliberately a different field
-// from the internal id (see DATABASE.md) so shareable URLs don't leak the
-// internal cuid.
+// GET /api/invoices/by-slug/:slug — public checkout lookup. The publicSlug
+// is deliberately separate from the internal invoice id so shareable URLs
+// do not expose the internal cuid.
 router.get('/by-slug/:slug', async (req, res) => {
   try {
     const invoice = await getInvoiceBySlug(req.params.slug);
