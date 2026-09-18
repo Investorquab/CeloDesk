@@ -30,6 +30,10 @@ type PendingAuthorization = {
 
 const authorizationCodes = new Map<string, PendingAuthorization>();
 
+function sha256(value: string): string {
+  return crypto.createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
 function getSecret(): string {
   const secret = process.env.JWT_SECRET;
 
@@ -515,6 +519,17 @@ export function mountOAuthRoutes(app: any): void {
     };
 
     try {
+      const authMessage = value(req.body.message) || '';
+      const authSignature = value(req.body.signature) || '';
+
+      console.log('[MCP AUTH DEBUG] outbound', {
+        walletAddress,
+        messageLength: authMessage.length,
+        signatureLength: authSignature.length,
+        messageHash: sha256(authMessage),
+        signatureHash: sha256(authSignature),
+      });
+
       const response = await fetch(
         `${BACKEND_API_URL}/api/auth/mcp-wallet`,
         {
@@ -525,8 +540,8 @@ export function mountOAuthRoutes(app: any): void {
           },
           body: JSON.stringify({
             walletAddress,
-            message: value(req.body.message) || '',
-            signature: value(req.body.signature) || '',
+            message: authMessage,
+            signature: authSignature,
           }),
         },
       );
