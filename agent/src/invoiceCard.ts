@@ -10,6 +10,7 @@ export type TelegramInvoiceCard = {
   description: string;
   dueDate?: string | null;
   publicUrl: string;
+  paymentQrValue: string;
 };
 
 function esc(value: string) {
@@ -17,7 +18,7 @@ function esc(value: string) {
 }
 
 export async function renderTelegramInvoiceCard(data: TelegramInvoiceCard): Promise<Buffer> {
-  const qrData = await QRCode.toDataURL(data.publicUrl, { margin: 1, width: 300, errorCorrectionLevel: 'M' });
+  const qrData = await QRCode.toDataURL(data.paymentQrValue, { margin: 1, width: 380, errorCorrectionLevel: 'M' });
   const logoPath = path.resolve(process.cwd(), 'src/assets/celodesk-logo.png');
   const logo = await fs.readFile(logoPath);
   const logoData = `data:image/png;base64,${logo.toString('base64')}`;
