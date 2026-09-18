@@ -305,3 +305,58 @@
   .feature div{min-width:0}
   .feature span{overflow-wrap:anywhere}
 }
+
+
+/* Merchant invoice details */
+.invoiceDetailPage{max-width:980px}
+.invoiceDetailHeader{align-items:flex-end;margin-bottom:20px}
+.invoiceDetailHeader h1{margin:4px 0 6px}
+.invoiceEyebrow{font-size:11px;letter-spacing:.08em;font-weight:800}
+.invoiceDetailCard{padding:0;overflow:hidden}
+.invoiceDetailSummary{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:28px 30px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,#fbfffd,#f5faf8)}
+.invoiceMetaLabel{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:7px}
+.invoiceDetailAmount{font-family:Manrope;font-size:42px;font-weight:800;letter-spacing:-.055em;line-height:1.05}
+.invoiceDetailStatus{display:grid;justify-items:end;gap:2px}
+.invoiceDetailStatus .pill{font-size:11px}
+.invoiceDetailMeta{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid var(--line)}
+.invoiceDetailMeta>div{padding:19px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.invoiceDetailMeta>div:nth-child(3n){border-right:0}
+.invoiceDetailMeta>div:nth-last-child(-n+3){border-bottom:0}
+.invoiceDetailMeta strong{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.invoiceDetailDescription{padding:20px 24px;border-bottom:1px solid var(--line)}
+.invoiceDetailDescription p{margin:7px 0 0;font-size:13px;line-height:1.6}
+.invoicePayments{padding:24px}
+.invoicePaymentsHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.invoicePaymentsHeader h2{margin:0 0 3px;font-size:16px}
+.invoicePaymentsHeader span{font-size:11px}
+.invoicePaymentList{border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.invoicePaymentItem{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.invoicePaymentItem:last-child{border-bottom:0}
+.paymentHistoryIcon{width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:#edf8f3;color:#0a8962;display:grid;place-items:center}
+.invoicePaymentMain{display:grid;gap:3px;min-width:0;flex:1}
+.invoicePaymentMain strong{font-size:12px}
+.invoicePaymentMain .muted{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.paymentHistoryStatus{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.invoiceEmptyPayments{min-height:110px;border:1px dashed var(--line);border-radius:16px;display:flex;align-items:center;justify-content:center;gap:9px;color:var(--muted);font-size:12px}
+.invoiceLoading{padding:34px;text-align:center;color:var(--muted)}
+@media(max-width:700px){
+  .invoiceDetailHeader{align-items:flex-start;gap:14px}
+  .invoiceDetailHeader .btn{flex:none}
+  .invoiceDetailSummary{padding:22px 20px}
+  .invoiceDetailAmount{font-size:34px}
+  .invoiceDetailMeta{grid-template-columns:1fr 1fr}
+  .invoiceDetailMeta>div:nth-child(3n){border-right:1px solid var(--line)}
+  .invoiceDetailMeta>div:nth-child(2n){border-right:0}
+  .invoiceDetailMeta>div:nth-last-child(-n+3){border-bottom:1px solid var(--line)}
+  .invoiceDetailMeta>div:nth-last-child(-n+2){border-bottom:0}
+  .invoicePayments{padding:18px}
+}
+@media(max-width:480px){
+  .invoiceDetailHeader{display:block}
+  .invoiceDetailHeader .btn{margin-top:12px;width:100%}
+  .invoiceDetailSummary{align-items:flex-start;flex-direction:column;gap:16px}
+  .invoiceDetailStatus{justify-items:start}
+  .invoiceDetailMeta{grid-template-columns:1fr}
+  .invoiceDetailMeta>div,.invoiceDetailMeta>div:nth-child(2n),.invoiceDetailMeta>div:nth-child(3n){border-right:0;border-bottom:1px solid var(--line)!important}
+  .invoiceDetailMeta>div:last-child{border-bottom:0!important}
+}
