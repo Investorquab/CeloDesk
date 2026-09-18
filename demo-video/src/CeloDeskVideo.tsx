@@ -115,13 +115,55 @@ function SceneMark({label}:{label:string}) {
   );
 }
 
+
+function ProductMockup({ variant = "dashboard" }: { variant?: "dashboard" | "payment" }) {
+  return (
+    <div style={{
+      width: 610, height: 410, borderRadius: 22, overflow: "hidden",
+      background: "#f7faf8", color: "#10201b",
+      border: "1px solid rgba(255,255,255,.18)",
+      boxShadow: "0 35px 100px rgba(0,0,0,.42)",
+    }}>
+      <div style={{ height: 42, background: "#e9efec", display: "flex", alignItems: "center", gap: 8, padding: "0 15px" }}>
+        <div style={{ display: "flex", gap: 6 }}><span style={{ width: 9, height: 9, borderRadius: 99, background: "#c5ceca" }} /><span style={{ width: 9, height: 9, borderRadius: 99, background: "#c5ceca" }} /><span style={{ width: 9, height: 9, borderRadius: 99, background: "#c5ceca" }} /></div>
+        <div style={{ marginLeft: 12, flex: 1, height: 24, borderRadius: 7, background: "#f8fbf9", border: "1px solid #dce5e1", fontFamily: mono, fontSize: 10, display: "flex", alignItems: "center", paddingLeft: 10, color: "#71817b" }}>celo-desk.vercel.app</div>
+      </div>
+      <div style={{ display: "flex", height: "calc(100% - 42px)" }}>
+        <div style={{ width: 116, background: "#10221d", padding: 16, color: "#dce9e4" }}>
+          <div style={{ fontWeight: 900, fontSize: 14 }}>CeloDesk</div>
+          <div style={{ marginTop: 28, fontSize: 11, color: CELO }}>Dashboard</div>
+          <div style={{ marginTop: 17, fontSize: 11, color: "#91a49d" }}>Invoices</div>
+          <div style={{ marginTop: 17, fontSize: 11, color: "#91a49d" }}>Activity</div>
+        </div>
+        <div style={{ flex: 1, padding: 22 }}>
+          <div style={{ fontSize: 12, color: "#6e7f78" }}>MERCHANT DASHBOARD</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginTop: 8 }}>
+            <div style={{ fontSize: 25, fontWeight: 900 }}>Payment desk</div>
+            <div style={{ background: "#11251f", color: CELO, borderRadius: 8, padding: "7px 10px", fontSize: 10, fontWeight: 800 }}>+ CREATE INVOICE</div>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+            <div style={{ flex: 1, padding: 13, borderRadius: 12, background: "#eef4f1" }}><div style={{ fontSize: 9, color: "#71817b" }}>RECEIVED</div><div style={{ fontSize: 22, fontWeight: 900, marginTop: 5 }}>$1,240</div></div>
+            <div style={{ flex: 1, padding: 13, borderRadius: 12, background: "#eef4f1" }}><div style={{ fontSize: 9, color: "#71817b" }}>OPEN INVOICES</div><div style={{ fontSize: 22, fontWeight: 900, marginTop: 5 }}>07</div></div>
+          </div>
+          <div style={{ marginTop: 15, border: "1px solid #dfe8e4", borderRadius: 13, overflow: "hidden" }}>
+            <div style={{ padding: "10px 12px", display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 9, color: "#71817b" }}><span>CD-1042 • David</span><span style={{ color: "#168557", fontWeight: 800 }}>✓ PAID</span></div>
+            <div style={{ padding: "10px 12px", borderTop: "1px solid #edf1ef", display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 9 }}><span>$25.00 USDC</span><span style={{ color: "#71817b" }}>Celo 42220</span></div>
+          </div>
+          <div style={{ marginTop: 14, fontFamily: mono, fontSize: 8, color: "#82918b" }}>LIVE ON-CHAIN PAYMENT STATE</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TitleScene() {
   const frame = useCurrentFrame();
   const scale = spring({ frame, fps: 30, config: { damping: 16, stiffness: 90 } });
   return (
     <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
-      <div style={{ position: "absolute", left: 100, top: 245, width: 1100 }}>
+      <div style={{ position: "absolute", left: 90, top: 235, width: 940 }}>
+
         <FadeIn><div style={{ color: CELO, fontFamily: mono, fontSize: 18, letterSpacing: 3, fontWeight: 700 }}>PAYMENTS, BUT CONNECTED</div></FadeIn>
         <div style={{ transform: "scale(" + (0.94 + scale * 0.06) + ")", transformOrigin: "left center" }}>
           <FadeIn delay={10} y={30}>
@@ -137,6 +179,9 @@ function TitleScene() {
             CeloDesk gives businesses one payment workflow across the web, Telegram and Claude — backed by live on-chain state.
           </div>
         </FadeIn>
+      </div>
+      <div style={{ position: "absolute", right: 72, top: 225, transform: "perspective(1200px) rotateY(-7deg) rotateX(2deg)" }}>
+        <FadeIn delay={28}><ProductMockup /></FadeIn>
       </div>
       <div style={{ position: "absolute", right: 120, bottom: 105 }}>
         <FadeIn delay={55}><div style={{ fontFamily: mono, fontSize: 18, color: MUTED }}>celo / 42220 / stablecoins</div></FadeIn>
@@ -157,7 +202,7 @@ function ProblemScene() {
       <div style={{ position: "absolute", top: 170, left: 90, right: 90 }}>
         <FadeIn><div style={{ fontFamily: mono, color: RED, fontSize: 17, letterSpacing: 2 }}>THE OLD WORKFLOW</div></FadeIn>
         <FadeIn delay={8}><div style={{ fontSize: 54, fontWeight: 850, marginTop: 14, letterSpacing: -2 }}>A payment can happen before your tools know it happened.</div></FadeIn>
-        <div style={{ display: "flex", gap: 22, marginTop: 52 }}>
+        <div style={{ display: "flex", gap: 22, marginTop: 42, alignItems: "center" }}>
           {cards.map(([n, title, sub], i) => (
             <FadeIn key={n} delay={25 + i * 12}>
               <div style={{ width: 340, height: 190, borderRadius: 20, padding: 26, background: PANEL, border: "1px solid #DCE5E0" }}>
@@ -168,7 +213,12 @@ function ProblemScene() {
             </FadeIn>
           ))}
         </div>
-        <FadeIn delay={70}><div style={{ marginTop: 40, fontFamily: mono, color: CELO, fontSize: 20 }}>CeloDesk closes that loop.</div></FadeIn>
+        <FadeIn delay={70}>
+          <div style={{ marginTop: 28, display: "flex", alignItems: "center", gap: 28 }}>
+            <div style={{ fontFamily: mono, color: CELO, fontSize: 20 }}>CeloDesk closes that loop.</div>
+            <div style={{ transform: "scale(.72)", transformOrigin: "left center" }}><ProductMockup /></div>
+          </div>
+        </FadeIn>
       </div>
     </AbsoluteFill>
   );
