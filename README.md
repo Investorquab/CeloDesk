@@ -316,6 +316,12 @@ MCP deployments additionally require the merchant-scoped configuration documente
 
 ---
 
+## Planned improvements
+
+### Username availability checking
+
+A future profile improvement will check username availability while the merchant is typing and show whether the username is available or already taken. This is planned for a later release and is not part of the current invoice/payment flow.
+
 ## Demo
 
 **Live product:** https://celo-desk.vercel.app
