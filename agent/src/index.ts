@@ -29,9 +29,64 @@ function cleanTelegramText(text: string): string {
     .replace(/\*\*(.*?)\*\*/gs, '$1')
     .replace(/__(.*?)__/gs, '$1')
     .replace(/`{1,3}([^`]+)`{1,3}/g, '$1')
-    .replace(/^\s*[-*]\s+/gm, '• ')
+    .replace(/^\s*[-*]\s+/gm, '· ')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$1: $2')
     .trim();
+}
+
+
+function invoiceStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    DRAFT: 'Draft',
+    SENT: 'Sent',
+    VIEWED: 'Viewed',
+    PENDING: 'Pending',
+    PARTIALLY_PAID: 'Partially paid',
+    PAID: 'Paid',
+    OVERPAID: 'Overpaid',
+    OVERDUE: 'Overdue',
+    FAILED: 'Failed',
+    CANCELLED: 'Cancelled',
+    EXPIRED: 'Expired',
+  };
+  return labels[status] || status.replaceAll('_', ' ');
+}
+
+function formatInvoiceDate(value: string | Date): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Date unavailable';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+async function sendRecentInvoices(ctx: any, artifact: any) {
+  const invoices = Array.isArray(artifact?.invoices) ? artifact.invoices : [];
+  if (!invoices.length) {
+    await ctx.reply('You do not have any invoices yet.', mainKeyboard);
+    return;
+  }
+
+  await ctx.reply('Your recent invoices', Markup.inlineKeyboard([
+    [Markup.button.callback('Create invoice', 'create_invoice')],
+  ]));
+
+  for (const invoice of invoices.slice(0, 10)) {
+    const lines = [
+      'Invoice',
+      String(invoice.clientName || 'Unnamed client'),
+      '',
+      'Amount  ' + String(invoice.amount || '0') + ' ' + String(invoice.tokenSymbol || ''),
+      'Status  ' + invoiceStatusLabel(String(invoice.status || '')),
+      'Created ' + formatInvoiceDate(invoice.createdAt),
+      invoice.dueDate ? 'Due     ' + formatInvoiceDate(invoice.dueDate) : '',
+      invoice.description ? 'For     ' + String(invoice.description) : '',
+    ].filter(Boolean);
+
+    const buttons = [];
+    if (invoice.publicUrl) {
+      buttons.push(Markup.button.url('Open invoice', invoice.publicUrl));
+    }
+    await ctx.reply(lines.join('\n'), Markup.inlineKeyboard([buttons]));
+  }
 }
 
 function remember(telegramId: string, message: { role: 'user' | 'assistant'; content: string }) {
@@ -61,7 +116,7 @@ async function sendInvoiceArtifact(ctx: any, artifact: any) {
       publicUrl: invoice.publicUrl,
     });
     await ctx.replyWithPhoto(Input.fromBuffer(image), {
-      caption: 'CeloDesk invoice • ready to share',
+      caption: 'CeloDesk invoice · ready to share',
       ...Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]),
     });
   } catch (err) {
@@ -83,10 +138,15 @@ async function askAgent(ctx: any, text: string) {
     const reply = cleanTelegramText(result.reply);
     remember(telegramId, { role: 'assistant', content: reply });
 
-    // The main menu belongs to the home state. Never attach it to an active conversation reply.
-    if (reply) await ctx.reply(reply);
-
     const invoiceArtifact = (result.artifacts ?? []).find((a: any) => a?.action === 'invoice_created');
+    const recentInvoicesArtifact = (result.artifacts ?? []).find((a: any) => a?.action === 'recent_activity');
+
+    if (recentInvoicesArtifact) {
+      await sendRecentInvoices(ctx, recentInvoicesArtifact);
+    } else if (reply) {
+      await ctx.reply(reply);
+    }
+
     if (invoiceArtifact) await sendInvoiceArtifact(ctx, invoiceArtifact);
   } catch (err: any) {
     console.error('CeloDesk Telegram agent error:', err);
