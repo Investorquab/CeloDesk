@@ -162,9 +162,8 @@ router.get('/:id/status', async (req, res) => {
 });
 
 // GET /api/invoices?merchantId=...&status=outstanding
-// Auth-gated: merchantId query param must match the authenticated
-// wallet's own merchantId — otherwise anyone could read anyone else's
-// invoice list just by changing this parameter (see SECURITY.md).
+// Auth-gated: the requested merchantId must match the authenticated
+// wallet's merchantId, preventing cross-account invoice access.
 router.get('/', requireAuth, async (req: AuthedRequest, res) => {
   const { merchantId, status } = req.query;
   if (!merchantId || typeof merchantId !== 'string') {
