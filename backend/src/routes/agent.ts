@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, AuthedRequest } from '../middleware/auth';
-import { createInvoice, getInvoice, listOutstandingInvoices, getPaymentSummary } from '../services/invoiceService';
+import { createInvoice, getInvoice, listOutstandingInvoices, getPaymentSummary, refreshInvoicePaymentStatus } from '../services/invoiceService';
 import { getMerchant } from '../services/merchantService';
 import { PrismaClient } from '@prisma/client';
 import { ethers } from 'ethers';
@@ -168,7 +168,20 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
     }
     case 'get_invoice_status': {
       const invoice = await findInvoiceForMerchant(merchantId, args);
-      return { action: 'invoice_status', invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), tokenSymbol: invoice.tokenSymbol, status: invoice.status, description: invoice.description } };
+      const refreshed = await refreshInvoicePaymentStatus(invoice.id);
+      return {
+        action: 'invoice_status',
+        invoice: {
+          id: refreshed.id,
+          publicSlug: refreshed.publicSlug,
+          clientName: refreshed.clientName,
+          amount: refreshed.amount.toString(),
+          tokenSymbol: refreshed.tokenSymbol,
+          status: refreshed.status,
+          description: refreshed.description,
+          payments: refreshed.payments,
+        },
+      };
     }
     case 'get_payment_summary': {
       const summary = await getPaymentSummary(merchantId);
