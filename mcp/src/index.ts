@@ -183,11 +183,22 @@ function formatMcpResult(toolName: string, result: any): string {
   }
 
   if (toolName === 'get_invoice_status') {
+    const paymentLines = Array.isArray(result?.payments) && result.payments.length
+      ? [
+          '',
+          '💳 **Verified payments**',
+          ...result.payments.slice(0, 5).map((payment: any) =>
+            `• ${payment.amount ?? '—'} ${payment.tokenSymbol ?? ''} · ${payment.status ?? '—'}${payment.txHash ? ` · ${payment.txHash}` : ''}`,
+          ),
+        ]
+      : [];
+
     return [
       '🔎 **Invoice status**',
       '',
-      `${invoiceStatusEmoji(result?.status)} **Status:** ${result?.status ?? 'Unknown'}`,
-    ].join('\n');
+      `\${invoiceStatusEmoji(result?.status)} **Status:** ${result?.status ?? 'Unknown'}`,
+      ...paymentLines,
+    ].join('\\n');
   }
 
   if (toolName === 'list_invoices') {
@@ -360,7 +371,7 @@ function createServer() {
     'get_invoice_status',
     {
       title: 'Get Invoice Status',
-      description: 'Check the current payment status of a CeloDesk invoice.',
+      description: 'Check the current payment status of a CeloDesk invoice. Preserve the returned emoji and Markdown formatting when presenting the result; do not remove the status icon.',
       inputSchema: z.object({
         invoiceId: z.string().min(1),
       }),
