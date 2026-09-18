@@ -11,13 +11,13 @@ function buildEvents(invoices:Invoice[],returnTo:string):EventItem[]{
  const out:EventItem[]=[];
  for(const i of invoices){
   out.push({id:`${i.id}-created`,kind:'created',title:'Invoice created',subtitle:`${i.clientName} · ${i.publicSlug.slice(0,8).toUpperCase()}`,amount:money(i.amount,i.tokenSymbol),time:i.createdAt,href:`/invoice/${i.publicSlug}?returnTo=${encodeURIComponent(returnTo)}`});
-  if(['SENT','VIEWED','PENDING','PAID','PARTIALLY_PAID','OVERDUE'].includes(i.status)) out.push({id:`${i.id}-sent`,kind:'sent',title:'Invoice sent',subtitle:`Payment request shared with ${i.clientName}`,amount:money(i.amount,i.tokenSymbol),time:i.updatedAt||i.createdAt,href:`/invoice/${i.publicSlug}?returnTo=${encodeURIComponent(returnTo)}`});
-  if(['VIEWED','PENDING','PAID','PARTIALLY_PAID','OVERDUE'].includes(i.status)) out.push({id:`${i.id}-viewed`,kind:'viewed',title:'Client viewed invoice',subtitle:`${i.clientName} opened the payment page`,amount:money(i.amount,i.tokenSymbol),time:i.updatedAt||i.createdAt,href:`/invoice/${i.publicSlug}?returnTo=${encodeURIComponent(returnTo)}`});
-  if(i.status==='PAID'){
-   const p=i.payments?.find(x=>x.status==='VERIFIED');
-   out.push({id:`${i.id}-paid`,kind:'paid',title:'Payment received',subtitle:p?.fromAddress?`Verified from ${shortAddress(p.fromAddress)}`:`${i.clientName} · verified on Celo`,amount:`+${money(i.amount,i.tokenSymbol)}`,time:p?.verifiedAt||i.updatedAt||i.createdAt,status:'Verified',href:`/invoice/${i.publicSlug}?returnTo=${encodeURIComponent(returnTo)}`});
-  } else if(i.status==='PENDING') out.push({id:`${i.id}-pending`,kind:'pending',title:'Payment pending',subtitle:`Waiting for confirmation · ${i.clientName}`,amount:money(i.amount,i.tokenSymbol),time:i.updatedAt||i.createdAt,status:'Pending',href:`/invoice/${i.publicSlug}?returnTo=${encodeURIComponent(returnTo)}`});
-  else if(i.status==='FAILED') out.push({id:`${i.id}-failed`,kind:'failed',title:'Payment failed',subtitle:`Payment could not be completed · ${i.clientName}`,amount:money(i.amount,i.tokenSymbol),time:i.updatedAt||i.createdAt,status:'Failed',href:`/invoice/${i.publicSlug}?returnTo=${encodeURIComponent(returnTo)}`});
+  const payments=[...(i.payments||[])].sort((a,b)=>+new Date(b.verifiedAt||b.detectedAt||i.updatedAt||i.createdAt)-+new Date(a.verifiedAt||a.detectedAt||i.updatedAt||i.createdAt));
+  for(const p of payments){
+   const href=`/invoice/${i.publicSlug}?returnTo=${encodeURIComponent(returnTo)}`;
+   if(p.status==='VERIFIED') out.push({id:`${i.id}-payment-${p.id}`,kind:'paid',title:'Payment received',subtitle:p.fromAddress?`Verified from ${shortAddress(p.fromAddress)}`:'Verified on Celo',amount:`+${money(p.amount,i.tokenSymbol)}`,time:p.verifiedAt||p.detectedAt||i.updatedAt||i.createdAt,status:'Verified',href});
+   else if(p.status==='REJECTED') out.push({id:`${i.id}-payment-${p.id}`,kind:'failed',title:'Payment rejected',subtitle:p.rejectionReason||'Payment did not match this invoice',amount:money(p.amount,i.tokenSymbol),time:p.detectedAt||i.updatedAt||i.createdAt,status:'Failed',href});
+   else if(p.status==='DETECTED'||p.status==='VERIFYING') out.push({id:`${i.id}-payment-${p.id}`,kind:'pending',title:'Payment pending',subtitle:'Waiting for payment verification',amount:money(p.amount,i.tokenSymbol),time:p.detectedAt||i.updatedAt||i.createdAt,status:'Pending',href});
+  }
  }
  return out.sort((a,b)=>+new Date(b.time)-+new Date(a.time));
 }
