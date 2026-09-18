@@ -1,6 +1,7 @@
 import React from "react";
 import {
   AbsoluteFill,
+  Audio,
   Easing,
   Sequence,
   interpolate,
@@ -19,6 +20,8 @@ const RED = "#ff7c7c";
 const BLUE = "#75b9ff";
 
 const mono = "'SFMono-Regular', 'Roboto Mono', 'Cascadia Code', monospace";
+const useVoiceover = process.env.CELODESK_VOICEOVER === "1";
+
 const sans = "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 function FadeIn({ children, delay = 0, y = 18 }: { children: React.ReactNode; delay?: number; y?: number }) {
@@ -434,6 +437,7 @@ function FinalScene() {
 
 export const CeloDeskVideo: React.FC = () => (
   <AbsoluteFill>
+    {useVoiceover && <Audio src={staticFile("voiceover.mp3")} volume={1} />}
     <Background />
     <Sequence from={0} durationInFrames={150}><TitleScene /></Sequence>
     <Sequence from={150} durationInFrames={180}><ProblemScene /></Sequence>
