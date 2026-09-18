@@ -409,7 +409,7 @@ function createServer() {
     {
       title: 'List CeloDesk Invoices',
       description:
-        'List invoices belonging to the authenticated CeloDesk merchant. For live payment status, use get_invoice_status or get_invoice; do not treat a list row's VIEWED/PENDING state as proof that no payment has arrived.',
+        "List invoices belonging to the authenticated CeloDesk merchant. For live payment status, use get_invoice_status or get_invoice; do not treat a list row's VIEWED/PENDING state as proof that no payment has arrived.",
       inputSchema: z.object({
         status: z
           .enum(['outstanding', 'all'])
