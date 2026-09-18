@@ -157,24 +157,25 @@ export async function findVerifiedTokenTransfer(
 }
 
 
-export async function findRecentDirectTokenPayment(
+export async function findRecentDirectTokenPayments(
   provider: ethers.JsonRpcProvider,
   input: {
     tokenAddress: string;
     receivingWallet: string;
     decimals: number;
     minBlock?: number;
+    maxBlocks?: number;
   },
-): Promise<{
+): Promise<Array<{
   txHash: string;
   fromAddress: string;
   amount: string;
   blockNumber: number;
   confirmations: number;
   blockTimestamp: number;
-} | null> {
+}>> {
   const latestBlock = await provider.getBlockNumber();
-  const fromBlock = Math.max(input.minBlock ?? 0, latestBlock - 10_000);
+  const fromBlock = Math.max(input.minBlock ?? 0, latestBlock - (input.maxBlocks ?? 50_000));
   const transferTopic = ethers.id('Transfer(address,address,uint256)');
   const recipientTopic = ethers.zeroPadValue(input.receivingWallet, 32);
 
@@ -184,6 +185,15 @@ export async function findRecentDirectTokenPayment(
     toBlock: latestBlock,
     topics: [transferTopic, null, recipientTopic],
   });
+
+  const results: Array<{
+    txHash: string;
+    fromAddress: string;
+    amount: string;
+    blockNumber: number;
+    confirmations: number;
+    blockTimestamp: number;
+  }> = [];
 
   for (const log of [...logs].reverse()) {
     if (!log.transactionHash) continue;
@@ -202,18 +212,43 @@ export async function findRecentDirectTokenPayment(
       const confirmations = latestBlock - receipt.blockNumber + 1;
       if (confirmations < MIN_CONFIRMATIONS) continue;
 
-      return {
+      results.push({
         txHash: log.transactionHash,
         fromAddress: parsed.args.from as string,
         amount: ethers.formatUnits(parsed.args.value as bigint, input.decimals),
         blockNumber: receipt.blockNumber,
         confirmations,
         blockTimestamp: block.timestamp,
-      };
+      });
     } catch {
       continue;
     }
   }
 
-  return null;
+  const seen = new Set<string>();
+  return results.filter((payment) => {
+    if (seen.has(payment.txHash)) return false;
+    seen.add(payment.txHash);
+    return true;
+  });
+}
+
+export async function findRecentDirectTokenPayment(
+  provider: ethers.JsonRpcProvider,
+  input: {
+    tokenAddress: string;
+    receivingWallet: string;
+    decimals: number;
+    minBlock?: number;
+  },
+): Promise<{
+  txHash: string;
+  fromAddress: string;
+  amount: string;
+  blockNumber: number;
+  confirmations: number;
+  blockTimestamp: number;
+} | null> {
+  const payments = await findRecentDirectTokenPayments(provider, input);
+  return payments[0] ?? null;
 }
