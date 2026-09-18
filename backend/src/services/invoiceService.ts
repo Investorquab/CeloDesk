@@ -100,6 +100,7 @@ function shortenAddress(address: string) {
 }
 
 export async function listOutstandingInvoices(merchantId: string) {
+  await refreshOverdueStatuses(merchantId);
   return prisma.invoice.findMany({
     where: {
       merchantId,
