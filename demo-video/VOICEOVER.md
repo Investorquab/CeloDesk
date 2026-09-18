@@ -1,64 +1,99 @@
-# CeloDesk Demo — Voice-over Script
+# CeloDesk — Premium Product Advert Voice-over
 
-Target runtime: about 63 seconds at a natural, confident pace.
+**Target:** 65–70 seconds  
+**Voice:** calm, premium, confident. Think polished fintech launch film — not a tutorial.  
+**Delivery:** short pauses between sentences; emphasize “direct”, “verified”, “paid”, and “one payment state”.
 
 ## 00:00 — Hook
-Payments shouldn't end when the blockchain transaction is sent.
 
-For a business, the real question is simple: did I actually get paid?
+Money can move in seconds.
 
-CeloDesk connects that entire loop.
+But for a business, the real question is:
 
-## 00:07 — Problem
-A merchant creates an invoice.
+**Did I actually get paid?**
 
-A customer pays from a wallet.
+Meet CeloDesk.
 
-And then somebody still has to check what happened.
+The AI payment desk that connects the request, the transaction, and the proof.
 
-CeloDesk turns that into one connected workflow.
+## 00:09 — The problem
 
-## 00:16 — Create
+Create an invoice.
+
+Send a payment request.
+
+Then someone still has to check what happened.
+
+CeloDesk closes that gap.
+
+## 00:17 — Create
+
 Create an invoice for a stablecoin on Celo.
 
-CeloDesk creates the invoice, recipient details and a direct payment request.
+Amount. Token. Merchant destination.
 
-## 00:23 — Pay
-The QR is not just a link to a webpage.
+Everything is prepared in one workflow.
 
-It is a direct ERC-681 token payment request.
+## 00:24 — Pay
 
-A compatible wallet can scan it, prepare the transfer, and send the payment directly to the merchant.
+And the QR isn't just a link to a webpage.
 
-## 00:33 — Verify
-Then CeloDesk checks the transaction on Celo Mainnet.
+It's a **direct ERC-681 payment request**.
 
-It verifies the chain, token, recipient, amount and confirmations.
+A compatible wallet scans it, prepares the transfer, and sends the payment directly to the merchant.
 
-The payment is recorded only after the backend can verify what happened on-chain.
+## 00:35 — Verify
 
-## 00:43 — State
-So an invoice can move from viewed to paid because the payment actually happened — not because somebody manually changed a status.
+Now CeloDesk checks Celo Mainnet.
 
-## 00:48 — Interfaces
-And the same payment state is available across the product.
+Chain.
+
+Token.
+
+Recipient.
+
+Amount.
+
+Confirmations.
+
+Only when the payment can be verified on-chain does the invoice move forward.
+
+## 00:45 — The moment
+
+**VIEWED becomes PAID.**
+
+No manual reconciliation.
+
+No guessing.
+
+A payment state backed by what actually happened on-chain.
+
+## 00:51 — Everywhere
+
+And that same state follows the team.
 
 The web dashboard.
 
-The Telegram agent.
+Telegram.
 
 And Claude through MCP.
 
-One backend. One payment state. Multiple ways to work.
+One backend.
 
-## 00:57 — Identity
+One payment state.
+
+Multiple ways to work.
+
+## 01:02 — Identity
+
 CeloDesk is also registered as an ERC-8004 agent on Celo.
 
-Agent ID 9799.
+**Agent ID 9799.**
 
-## 01:02 — Close
+## 01:06 — Close
+
 CeloDesk.
 
-Create. Pay. Verify.
+**Create. Pay. Verify. Done.**
 
-Stablecoin payments, connected to the way businesses actually work.
+AI-powered stablecoin payments for businesses on Celo.
