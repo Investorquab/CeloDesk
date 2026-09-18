@@ -117,7 +117,7 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
     setReason('Payment submitted. Waiting for Celo confirmation...');
 
   }catch(e:any){
-    setReason(e?.message||'Payment failed.');
+    setReason(userFacingError(e,'Payment failed.'));
     setPayState('failed');
   }
 }
