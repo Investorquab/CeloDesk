@@ -9,15 +9,15 @@ import {
   useCurrentFrame,
 } from "remotion";
 
-const BG = "#07110f";
-const PANEL = "#0d1c18";
-const PANEL_2 = "#11251f";
-const TEXT = "#f5f7f6";
-const MUTED = "#9db1aa";
+const BG = "#FFFFFF";
+const PANEL = "#F5F8F6";
+const PANEL_2 = "#EDF3F0";
+const TEXT = "#10211D";
+const MUTED = "#60736B";
 const CELO = "#fbf76a";
-const GREEN = "#62e6a7";
-const RED = "#ff7c7c";
-const BLUE = "#75b9ff";
+const GREEN = "#149B63";
+const RED = "#C55353";
+const BLUE = "#3977B8";
 
 const mono = "'SFMono-Regular', 'Roboto Mono', 'Cascadia Code', monospace";
 const useVoiceover = process.env.CELODESK_VOICEOVER === "1";
@@ -46,8 +46,8 @@ function Pill({ children, active = false }: { children: React.ReactNode; active?
       gap: 8,
       padding: "8px 13px",
       borderRadius: 999,
-      background: active ? "rgba(251,247,106,.12)" : "rgba(255,255,255,.055)",
-      border: "1px solid " + (active ? "rgba(251,247,106,.35)" : "rgba(255,255,255,.10)"),
+      background: active ? "rgba(251,247,106,.28)" : "#F3F6F4",
+      border: "1px solid " + (active ? "rgba(176,168,40,.45)" : "#DCE5E0"),
       color: active ? CELO : MUTED,
       fontSize: 16,
       fontWeight: 650,
@@ -83,12 +83,12 @@ function Background() {
     <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <div style={{
         position: "absolute", inset: -120,
-        background: "radial-gradient(circle at 20% 20%, rgba(98,230,167,.09), transparent 28%), radial-gradient(circle at 85% 65%, rgba(117,185,255,.07), transparent 25%)",
+        background: "radial-gradient(circle at 18% 18%, rgba(251,247,106,.20), transparent 24%), radial-gradient(circle at 86% 70%, rgba(20,155,99,.08), transparent 28%)",
         transform: "translateY(" + drift + "px)",
       }} />
       <div style={{
-        position: "absolute", inset: 0, opacity: .07,
-        backgroundImage: "linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px)",
+        position: "absolute", inset: 0, opacity: .55,
+        backgroundImage: "linear-gradient(rgba(16,33,29,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(16,33,29,.055) 1px, transparent 1px)",
         backgroundSize: "48px 48px",
       }} />
     </AbsoluteFill>
@@ -119,7 +119,7 @@ function TitleScene() {
   const frame = useCurrentFrame();
   const scale = spring({ frame, fps: 30, config: { damping: 16, stiffness: 90 } });
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", left: 100, top: 245, width: 1100 }}>
         <FadeIn><div style={{ color: CELO, fontFamily: mono, fontSize: 18, letterSpacing: 3, fontWeight: 700 }}>PAYMENTS, BUT CONNECTED</div></FadeIn>
@@ -152,7 +152,7 @@ function ProblemScene() {
     ["03", "Status", "Someone checks manually"],
   ];
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", top: 170, left: 90, right: 90 }}>
         <FadeIn><div style={{ fontFamily: mono, color: RED, fontSize: 17, letterSpacing: 2 }}>THE OLD WORKFLOW</div></FadeIn>
@@ -160,7 +160,7 @@ function ProblemScene() {
         <div style={{ display: "flex", gap: 22, marginTop: 52 }}>
           {cards.map(([n, title, sub], i) => (
             <FadeIn key={n} delay={25 + i * 12}>
-              <div style={{ width: 340, height: 190, borderRadius: 20, padding: 26, background: PANEL, border: "1px solid rgba(255,255,255,.08)" }}>
+              <div style={{ width: 340, height: 190, borderRadius: 20, padding: 26, background: PANEL, border: "1px solid #DCE5E0" }}>
                 <div style={{ color: MUTED, fontFamily: mono }}>{n}</div>
                 <div style={{ fontSize: 29, fontWeight: 800, marginTop: 20 }}>{title}</div>
                 <div style={{ color: MUTED, marginTop: 10, fontSize: 18 }}>{sub}</div>
@@ -178,9 +178,9 @@ function InvoiceCard() {
   return (
     <div style={{
       width: 520, borderRadius: 24, padding: 28,
-      background: "linear-gradient(145deg, #13251f, #0a1714)",
-      border: "1px solid rgba(255,255,255,.12)",
-      boxShadow: "0 30px 80px rgba(0,0,0,.35)",
+      background: "#FFFFFF",
+      border: "1px solid #DCE5E0",
+      boxShadow: "0 30px 80px rgba(16,33,29,.12)",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ color: MUTED, fontFamily: mono, fontSize: 14 }}>INVOICE #CD-1042</span>
@@ -189,10 +189,10 @@ function InvoiceCard() {
       <div style={{ fontSize: 48, fontWeight: 900, marginTop: 28 }}>$25.00 <span style={{ color: CELO, fontSize: 24 }}>USDC</span></div>
       <div style={{ color: MUTED, fontSize: 18, marginTop: 8 }}>To David • Software service</div>
       <div style={{ marginTop: 28, display: "flex", gap: 12 }}>
-        <div style={{ flex: 1, padding: 14, borderRadius: 14, background: "rgba(255,255,255,.05)" }}>
+        <div style={{ flex: 1, padding: 14, borderRadius: 14, background: "#F3F6F4" }}>
           <div style={{ color: MUTED, fontSize: 12 }}>NETWORK</div><div style={{ fontFamily: mono, marginTop: 6 }}>Celo • 42220</div>
         </div>
-        <div style={{ flex: 1, padding: 14, borderRadius: 14, background: "rgba(255,255,255,.05)" }}>
+        <div style={{ flex: 1, padding: 14, borderRadius: 14, background: "#F3F6F4" }}>
           <div style={{ color: MUTED, fontSize: 12 }}>REQUEST</div><div style={{ fontFamily: mono, marginTop: 6 }}>ERC-681</div>
         </div>
       </div>
@@ -221,11 +221,11 @@ function FakeQR() {
 
 function CreateScene() {
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", top: 165, left: 90, right: 90, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ width: 700 }}>
-          <FadeIn><div style={{ color: CELO, fontFamily: mono, fontSize: 17, letterSpacing: 2 }}>STEP 01 / CREATE</div></FadeIn>
+          <FadeIn><div style={{ color: "#8A841D", fontFamily: mono, fontSize: 16, letterSpacing: 2 }}>STEP 01 / CREATE</div></FadeIn>
           <FadeIn delay={10}><div style={{ fontSize: 58, fontWeight: 900, marginTop: 15, letterSpacing: -2 }}>Create an invoice.</div></FadeIn>
           <FadeIn delay={25}><div style={{ color: MUTED, fontSize: 23, lineHeight: 1.5, marginTop: 22 }}>CeloDesk creates the invoice, recipient details and a direct payment request.</div></FadeIn>
           <FadeIn delay={42}><div style={{ marginTop: 34, display: "flex", gap: 10 }}><Pill active>USDC</Pill><Pill>USDm</Pill><Pill>USDT</Pill></div></FadeIn>
@@ -240,12 +240,12 @@ function QRScene() {
   const frame = useCurrentFrame();
   const glow = interpolate(Math.sin(frame / 9), [-1, 1], [.96, 1.02]);
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", top: 170, left: 90, right: 90, display: "flex", justifyContent: "center", gap: 100, alignItems: "center" }}>
         <FadeIn>
           <div>
-            <div style={{ color: CELO, fontFamily: mono, fontSize: 17, letterSpacing: 2 }}>STEP 02 / REQUEST</div>
+            <div style={{ color: "#8A841D", fontFamily: mono, fontSize: 16, letterSpacing: 2 }}>STEP 02 / REQUEST</div>
             <div style={{ fontSize: 56, fontWeight: 900, marginTop: 15, letterSpacing: -2 }}>Scan. Confirm. Pay.</div>
             <div style={{ width: 560, color: MUTED, fontSize: 22, lineHeight: 1.5, marginTop: 22 }}>The QR is a direct ERC-681 payment request — not an invoice website link.</div>
             <div style={{ marginTop: 30, fontFamily: mono, fontSize: 16, color: GREEN }}>wallet → token transfer → merchant wallet</div>
@@ -267,15 +267,15 @@ function TransactionScene() {
   const p = interpolate(frame, [10, 100], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
   const x = interpolate(p, [0, 1], [120, 1640]);
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", top: 160, left: 90, right: 90 }}>
-        <FadeIn><div style={{ color: CELO, fontFamily: mono, fontSize: 17, letterSpacing: 2 }}>STEP 03 / ON-CHAIN</div></FadeIn>
+        <FadeIn><div style={{ color: "#8A841D", fontFamily: mono, fontSize: 16, letterSpacing: 2 }}>STEP 03 / ON-CHAIN</div></FadeIn>
         <FadeIn delay={8}><div style={{ fontSize: 55, fontWeight: 900, marginTop: 14 }}>The wallet sends the payment.</div></FadeIn>
         <div style={{ position: "relative", height: 330, marginTop: 55 }}>
-          <div style={{ position: "absolute", left: 50, right: 50, top: 160, height: 2, background: "rgba(255,255,255,.10)" }} />
-          <div style={{ position: "absolute", left: 30, top: 120, width: 80, height: 80, borderRadius: 22, background: PANEL_2, border: "1px solid rgba(255,255,255,.12)", display: "grid", placeItems: "center", fontSize: 34 }}>👛</div>
-          <div style={{ position: "absolute", right: 30, top: 120, width: 80, height: 80, borderRadius: 22, background: "rgba(98,230,167,.10)", border: "1px solid rgba(98,230,167,.3)", display: "grid", placeItems: "center", fontSize: 34 }}>🏪</div>
+          <div style={{ position: "absolute", left: 50, right: 50, top: 160, height: 2, background: "#DCE5E0" }} />
+          <div style={{ position: "absolute", left: 30, top: 120, width: 80, height: 80, borderRadius: 22, background: PANEL_2, border: "1px solid #DCE5E0", display: "grid", placeItems: "center", fontSize: 34 }}>👛</div>
+          <div style={{ position: "absolute", right: 30, top: 120, width: 80, height: 80, borderRadius: 22, background: "#E9F7F0", border: "1px solid rgba(98,230,167,.3)", display: "grid", placeItems: "center", fontSize: 34 }}>🏪</div>
           <div style={{ position: "absolute", left: x, top: 148, width: 28, height: 28, borderRadius: "50%", background: CELO, boxShadow: "0 0 35px rgba(251,247,106,.5)" }} />
           <div style={{ position: "absolute", left: 50, top: 205, fontFamily: mono, color: MUTED }}>customer wallet</div>
           <div style={{ position: "absolute", right: 35, top: 205, fontFamily: mono, color: MUTED }}>merchant wallet</div>
@@ -296,15 +296,15 @@ function VerifyScene() {
     ["CONFIRM", "12+", "Confirmations"],
   ];
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", top: 165, left: 90, right: 90 }}>
-        <FadeIn><div style={{ color: CELO, fontFamily: mono, fontSize: 17, letterSpacing: 2 }}>STEP 04 / VERIFY</div></FadeIn>
+        <FadeIn><div style={{ color: "#8A841D", fontFamily: mono, fontSize: 16, letterSpacing: 2 }}>STEP 04 / VERIFY</div></FadeIn>
         <FadeIn delay={8}><div style={{ fontSize: 55, fontWeight: 900, marginTop: 14 }}>CeloDesk verifies what happened.</div></FadeIn>
         <div style={{ marginTop: 48, display: "flex", gap: 25 }}>
           {rows.map(([a, b, c], i) => (
             <FadeIn key={a} delay={22 + i * 10}>
-              <div style={{ width: 300, height: 175, borderRadius: 20, background: PANEL, border: "1px solid rgba(255,255,255,.08)", padding: 23, boxSizing: "border-box" }}>
+              <div style={{ width: 300, height: 175, borderRadius: 20, background: PANEL, border: "1px solid #DCE5E0", padding: 23, boxSizing: "border-box" }}>
                 <div style={{ fontFamily: mono, color: MUTED, fontSize: 13 }}>{a}</div>
                 <div style={{ fontSize: 34, fontWeight: 850, marginTop: 19 }}>{b}</div>
                 <div style={{ color: MUTED, marginTop: 7 }}>{c}</div>
@@ -313,7 +313,7 @@ function VerifyScene() {
           ))}
         </div>
         <FadeIn delay={72}>
-          <div style={{ margin: "48px auto 0", width: 500, padding: 20, borderRadius: 18, background: "rgba(98,230,167,.10)", border: "1px solid rgba(98,230,167,.30)", display: "flex", alignItems: "center", justifyContent: "center", gap: 14, opacity: check }}>
+          <div style={{ margin: "48px auto 0", width: 500, padding: 20, borderRadius: 18, background: "#E9F7F0", border: "1px solid #BDE5CF", display: "flex", alignItems: "center", justifyContent: "center", gap: 14, opacity: check }}>
             <span style={{ fontSize: 30 }}>✓</span><span style={{ fontSize: 27, fontWeight: 850 }}>Payment verified on-chain</span>
           </div>
         </FadeIn>
@@ -327,10 +327,10 @@ function StatusScene() {
   const progress = interpolate(frame, [0, 65], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const color = progress < .55 ? MUTED : GREEN;
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", top: 175, left: 90, right: 90, textAlign: "center" }}>
-        <FadeIn><div style={{ color: CELO, fontFamily: mono, fontSize: 17, letterSpacing: 2 }}>THE STATE CHANGES</div></FadeIn>
+        <FadeIn><div style={{ color: "#8A841D", fontFamily: mono, fontSize: 16, letterSpacing: 2 }}>THE STATE CHANGES</div></FadeIn>
         <FadeIn delay={10}><div style={{ fontSize: 56, fontWeight: 900, marginTop: 15 }}>No manual reconciliation.</div></FadeIn>
         <div style={{ marginTop: 55, display: "flex", alignItems: "center", justifyContent: "center", gap: 24 }}>
           <div style={{ fontFamily: mono, fontSize: 42, color: progress > .55 ? "#667873" : TEXT, textDecoration: progress > .55 ? "line-through" : "none" }}>VIEWED</div>
@@ -338,7 +338,7 @@ function StatusScene() {
           <div style={{ fontFamily: mono, fontSize: 58, color, fontWeight: 900 }}>PAID ✓</div>
         </div>
         <FadeIn delay={35}>
-          <div style={{ margin: "45px auto 0", width: 720, padding: 24, borderRadius: 20, background: PANEL, border: "1px solid rgba(255,255,255,.08)", textAlign: "left", fontFamily: mono, color: MUTED }}>
+          <div style={{ margin: "45px auto 0", width: 720, padding: 24, borderRadius: 20, background: PANEL, border: "1px solid #DCE5E0", textAlign: "left", fontFamily: mono, color: MUTED }}>
             <div><span style={{ color: GREEN }}>✓</span> Transfer matched to merchant</div>
             <div style={{ marginTop: 12 }}><span style={{ color: GREEN }}>✓</span> Amount satisfied</div>
             <div style={{ marginTop: 12 }}><span style={{ color: GREEN }}>✓</span> Transaction recorded</div>
@@ -365,10 +365,10 @@ function InterfaceCard({ icon, title, sub, children, delay }: { icon: string; ti
 
 function InterfacesScene() {
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", top: 145, left: 70, right: 70 }}>
-        <FadeIn><div style={{ color: CELO, fontFamily: mono, fontSize: 17, letterSpacing: 2 }}>ONE PAYMENT STATE / THREE SURFACES</div></FadeIn>
+        <FadeIn><div style={{ color: "#8A841D", fontFamily: mono, fontSize: 16, letterSpacing: 2 }}>ONE PAYMENT STATE / THREE SURFACES</div></FadeIn>
         <FadeIn delay={8}><div style={{ fontSize: 50, fontWeight: 900, marginTop: 13 }}>The same invoice follows you.</div></FadeIn>
         <div style={{ display: "flex", gap: 20, marginTop: 42 }}>
           <InterfaceCard icon="⌁" title="Web App" sub="Merchant dashboard" delay={20}>
@@ -385,7 +385,7 @@ function InterfacesScene() {
           </InterfaceCard>
           <InterfaceCard icon="◈" title="Claude + MCP" sub="Live tool access" delay={48}>
             <div style={{ fontFamily: mono, fontSize: 13, color: BLUE }}>get_invoice_status("CD-1042")</div>
-            <div style={{ marginTop: 15, padding: 14, borderRadius: 14, background: "rgba(117,185,255,.08)", color: TEXT }}>
+            <div style={{ marginTop: 15, padding: 14, borderRadius: 14, background: "#EEF6FC", color: TEXT }}>
               <span style={{ color: GREEN }}>✓ PAID</span><br /><span style={{ color: MUTED }}>Verified payment state</span>
             </div>
           </InterfaceCard>
@@ -400,18 +400,18 @@ function AgentScene() {
   const frame = useCurrentFrame();
   const pulse = 1 + Math.sin(frame / 7) * .025;
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", top: 170, left: 90, right: 90, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ width: 760 }}>
-          <FadeIn><div style={{ color: CELO, fontFamily: mono, fontSize: 17, letterSpacing: 2 }}>AGENT IDENTITY</div></FadeIn>
+          <FadeIn><div style={{ color: "#8A841D", fontFamily: mono, fontSize: 16, letterSpacing: 2 }}>AGENT IDENTITY</div></FadeIn>
           <FadeIn delay={10}><div style={{ fontSize: 57, fontWeight: 900, marginTop: 15 }}>CeloDesk is registered on-chain.</div></FadeIn>
           <FadeIn delay={24}><div style={{ color: MUTED, fontSize: 22, lineHeight: 1.5, marginTop: 22 }}>The agent identity connects the product to an ERC-8004 registration on Celo.</div></FadeIn>
           <FadeIn delay={40}><div style={{ marginTop: 30, fontFamily: mono, color: MUTED, fontSize: 18 }}>AGENT ID <span style={{ color: CELO }}>#9799</span></div></FadeIn>
           <FadeIn delay={52}><div style={{ marginTop: 14, fontFamily: mono, color: MUTED, fontSize: 15 }}>chain: celo • registry: 8004 Identity Registry</div></FadeIn>
         </div>
         <FadeIn delay={28}>
-          <div style={{ width: 350, height: 350, borderRadius: 40, background: "linear-gradient(145deg, rgba(251,247,106,.16), rgba(98,230,167,.08))", border: "1px solid rgba(251,247,106,.3)", display: "grid", placeItems: "center", transform: "scale(" + pulse + ")" }}>
+          <div style={{ width: 350, height: 350, borderRadius: 40, background: "linear-gradient(145deg, #FFFDE3, #EFF9F4)", border: "1px solid #E1DA70", display: "grid", placeItems: "center", transform: "scale(" + pulse + ")" }}>
             <div style={{ textAlign: "center" }}><div style={{ fontSize: 82, fontWeight: 950, color: CELO }}>#9799</div><div style={{ color: MUTED, marginTop: 12, fontFamily: mono }}>ERC-8004 AGENT</div></div>
           </div>
         </FadeIn>
@@ -424,7 +424,7 @@ function FinalScene() {
   const frame = useCurrentFrame();
   const scale = spring({ frame, fps: 30, config: { damping: 15, stiffness: 80 } });
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{ background: BG, color: TEXT, fontFamily: sans, overflow: "hidden" }}>
       <Header />
       <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", textAlign: "center" }}>
         <div style={{ transform: "scale(" + (0.94 + scale * .06) + ")" }}>
