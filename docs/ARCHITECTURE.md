@@ -1,7 +1,5 @@
 # CeloDesk Architecture
 
-## System overview
-
 CeloDesk has one core payment system and several ways to access it.
 
 ```text
@@ -106,7 +104,7 @@ Invoice status
 
 A direct ERC-20 transfer does not contain a CeloDesk invoice ID. Reconciliation therefore matches a verified transfer against outstanding invoices using merchant, token, receiving wallet, amount, and timing information. When a specific invoice is being checked, a valid match to that requested invoice is preferred.
 
-## Source-of-truth rule
+## Source of truth
 
 > **The blockchain is the source of truth for settlement. CeloDesk's backend is the source of truth for verified application state.**
 
@@ -125,13 +123,7 @@ The deployed system uses:
 
 Production Node processes are managed with PM2.
 
-## Documentation
+## Further reading
 
-- [Product README](../../README.md)
-- [API](API.md)
-- [Security](SECURITY.md)
-- [Database](DATABASE.md)
-- [Environment](ENVIRONMENT.md)
-- [Integration](INTEGRATION.md)
-- [MiniPay](MINIPAY.md)
-- [Final submission test](../../docs/SUBMISSION.md)
+- [Product README](../README.md)
+- [End-to-end demo](DEMO.md)
