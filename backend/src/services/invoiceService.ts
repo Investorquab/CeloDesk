@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { getToken, CELO_MAINNET_CHAIN_ID, CELO_TOKENS } from '../celo/tokens';
+import { findRecentDirectTokenPayments } from './paymentVerifier';
 import { HACKATHON_ATTRIBUTION_TAG } from './attribution';
 import { ethers } from 'ethers';
 
@@ -63,6 +64,103 @@ export async function getInvoice(id: string) {
     where: { id },
     include: invoiceWithMerchantInclude,
   });
+}
+
+/**
+ * Reconcile direct ERC-20 transfers that were made outside the checkout.
+ * This is used by every status-reading path (web/API and AI agents), so
+ * an invoice cannot be stuck at VIEWED merely because the payment was
+ * made from a wallet scanner instead of the CeloDesk checkout.
+ */
+export async function refreshInvoicePaymentStatus(invoiceId: string) {
+  const invoice = await getInvoice(invoiceId);
+  if (!['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status)) {
+    return invoice;
+  }
+
+  const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+  const token = getToken(invoice.tokenSymbol);
+
+  const candidates = await prisma.invoice.findMany({
+    where: {
+      merchantId: invoice.merchantId,
+      tokenAddress: invoice.tokenAddress,
+      receivingWallet: invoice.receivingWallet,
+      status: { in: ['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE'] },
+    },
+    include: {
+      payments: {
+        where: { status: 'VERIFIED' },
+        select: { amount: true },
+      },
+    },
+  });
+
+  const directPayments = await findRecentDirectTokenPayments(provider, {
+    tokenAddress: token.address,
+    receivingWallet: invoice.receivingWallet,
+    decimals: token.decimals,
+    maxBlocks: 50_000,
+  });
+
+  for (const directPayment of directPayments) {
+    const alreadyRecorded = await prisma.payment.findUnique({ where: { txHash: directPayment.txHash } });
+    if (alreadyRecorded) continue;
+
+    const paymentAmountUnits = ethers.parseUnits(directPayment.amount, token.decimals);
+    const matchingCandidates = candidates.filter((candidate) => {
+      const expectedUnits = ethers.parseUnits(candidate.amount.toString(), token.decimals);
+      const paidUnits = candidate.payments.reduce(
+        (sum, payment) => sum + ethers.parseUnits(payment.amount.toString(), token.decimals),
+        0n,
+      );
+      const remainingUnits = expectedUnits > paidUnits ? expectedUnits - paidUnits : 0n;
+      return remainingUnits > 0n &&
+        directPayment.blockTimestamp * 1000 >= candidate.createdAt.getTime() &&
+        paymentAmountUnits >= remainingUnits;
+    });
+
+    if (matchingCandidates.length !== 1) continue;
+
+    const target = matchingCandidates[0];
+    const expectedUnits = ethers.parseUnits(target.amount.toString(), token.decimals);
+    const priorUnits = target.payments.reduce(
+      (sum, payment) => sum + ethers.parseUnits(payment.amount.toString(), token.decimals),
+      0n,
+    );
+    const aggregate = priorUnits + paymentAmountUnits;
+    const newStatus = aggregate > expectedUnits
+      ? 'OVERPAID'
+      : aggregate === expectedUnits
+        ? 'PAID'
+        : 'PARTIALLY_PAID';
+
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.create({
+        data: {
+          invoiceId: target.id,
+          txHash: directPayment.txHash,
+          chainId: target.chainId,
+          fromAddress: directPayment.fromAddress,
+          toAddress: target.receivingWallet,
+          tokenAddress: target.tokenAddress,
+          amount: directPayment.amount,
+          status: 'VERIFIED',
+          confirmations: directPayment.confirmations,
+          blockNumber: directPayment.blockNumber,
+          verifiedAt: new Date(),
+        },
+      });
+      await tx.invoice.update({
+        where: { id: target.id },
+        data: { status: newStatus },
+      });
+    });
+
+    break;
+  }
+
+  return getInvoice(invoiceId);
 }
 
 // Public checkout pages resolve by publicSlug, not the internal id —
