@@ -2,7 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'CeloDesk — Get paid globally, with just a link',
+  title: 'CeloDesk - Get paid globally, with just a link',
   description: 'Beautiful stablecoin invoices and payments on Celo.',
 };
 
