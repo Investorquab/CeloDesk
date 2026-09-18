@@ -196,9 +196,9 @@ function formatMcpResult(toolName: string, result: any): string {
     return [
       '🔎 **Invoice status**',
       '',
-      `\${invoiceStatusEmoji(result?.status)} **Status:** ${result?.status ?? 'Unknown'}`,
+      `${invoiceStatusEmoji(result?.status)} **Status:** ${result?.status ?? 'Unknown'}`,
       ...paymentLines,
-    ].join('\\n');
+    ].join('\n');
   }
 
   if (toolName === 'list_invoices') {
