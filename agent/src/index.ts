@@ -121,7 +121,7 @@ async function requireSession(ctx: any): Promise<Session | null> {
   const telegramId = String(ctx.from.id);
   const session = sessions.get(telegramId);
   if (session) return session;
-  await ctx.reply('Your CeloDesk session is not active. Send /start to reconnect your wallet.');
+  await ctx.reply('🔐 <b>Session inactive</b>\n\nSend /start to reconnect your Celo wallet.');
   return null;
 }
 
@@ -138,13 +138,114 @@ async function sendInvoiceArtifact(ctx: any, artifact: any) {
       publicUrl: invoice.publicUrl,
     });
     await ctx.replyWithPhoto(Input.fromBuffer(image), {
-      caption: 'CeloDesk invoice · ready to share',
+      caption: '🧾 CeloDesk invoice · ready to share',
       ...Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]),
     });
   } catch (err) {
     console.error('Telegram invoice card render failed:', err);
-    await ctx.reply('Your invoice is ready:', Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]));
+    await ctx.reply('✅ <b>Your invoice is ready</b>:', Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]));
   }
+}
+
+
+function invoiceStatusEmoji(status: string): string {
+  return invoiceStatusIcon(status);
+}
+
+function formatInvoiceBlock(invoice: any, detailed = false): string {
+  const status = String(invoice?.status || '');
+  const client = telegramHtml(String(invoice?.clientName || 'Unnamed client'));
+  const amount = telegramHtml(String(invoice?.amount || '0'));
+  const token = telegramHtml(String(invoice?.tokenSymbol || ''));
+  const lines = [
+    `🧾 <b>${client}</b>`,
+    `💰 <b>Amount:</b> ${amount} ${token}`,
+    `${invoiceStatusEmoji(status)} <b>Status:</b> ${telegramHtml(invoiceStatusLabel(status))}`,
+  ];
+  if (invoice?.createdAt) lines.push(`📅 <b>Created:</b> ${telegramHtml(formatInvoiceDate(invoice.createdAt))}`);
+  if (invoice?.dueDate) lines.push(`⏰ <b>Due:</b> ${telegramHtml(formatInvoiceDate(invoice.dueDate))}`);
+  if (invoice?.description) lines.push(`📝 <b>Description:</b> ${telegramHtml(String(invoice.description))}`);
+  if (detailed && Array.isArray(invoice?.payments) && invoice.payments.length) {
+    lines.push('', '💳 <b>Payments</b>');
+    for (const payment of invoice.payments.slice(0, 5)) {
+      const paymentStatus = String(payment.status || '');
+      lines.push(`• ${telegramHtml(String(payment.amount || '0'))} ${telegramHtml(String(payment.tokenSymbol || token))} · ${telegramHtml(paymentStatus)}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+function formatArtifactReply(artifact: any): string | null {
+  if (!artifact?.action) return null;
+  switch (artifact.action) {
+    case 'invoice_status':
+      return `🔎 <b>Invoice status</b>\n\n${formatInvoiceBlock(artifact.invoice)}`;
+    case 'invoice_detail':
+      return `📄 <b>Invoice details</b>\n\n${formatInvoiceBlock(artifact.invoice, true)}`;
+    case 'outstanding': {
+      const invoices = Array.isArray(artifact.invoices) ? artifact.invoices : [];
+      if (!invoices.length) return '🎉 <b>You are all caught up!</b>\n\nThere are no outstanding invoices right now.';
+      const lines = ['💰 <b>Outstanding invoices</b>', '', `${invoices.length} invoice${invoices.length === 1 ? '' : 's'} awaiting payment`, ''];
+      for (const invoice of invoices.slice(0, 10)) lines.push(formatInvoiceBlock(invoice), '');
+      lines.push('💡 Ask me about any invoice for more details.');
+      return lines.join('\n');
+    }
+    case 'payment_summary': {
+      const summary = artifact.summary || {};
+      const byStatus = summary.byStatus || {};
+      const outstandingByToken = summary.outstandingByToken || {};
+      const lines = [
+        '📊 <b>Payment summary</b>',
+        '',
+        `🧾 <b>Total invoices:</b> ${Number(summary.total || 0)}`,
+        `📤 <b>Sent:</b> ${Number(byStatus.SENT || 0)}`,
+        `👀 <b>Viewed:</b> ${Number(byStatus.VIEWED || 0)}`,
+        `⏳ <b>Pending:</b> ${Number(byStatus.PENDING || 0)}`,
+        `🟡 <b>Partially paid:</b> ${Number(byStatus.PARTIALLY_PAID || 0)}`,
+        `✅ <b>Paid:</b> ${Number(byStatus.PAID || 0) + Number(byStatus.OVERPAID || 0)}`,
+      ];
+      const tokenEntries = Object.entries(outstandingByToken) as [string, unknown][];
+      if (tokenEntries.length) {
+        lines.push('', '💸 <b>Still outstanding</b>');
+        for (const [token, amount] of tokenEntries) lines.push(`• ${telegramHtml(String(amount))} ${telegramHtml(token)}`);
+      } else {
+        lines.push('', '🎉 <b>Nothing outstanding</b>');
+      }
+      return lines.join('\n');
+    }
+    case 'help':
+      return ['🤖 <b>What CeloDesk can do</b>', '', '🧾 Create invoices', '💰 See who still owes you', '🔎 Check invoice and payment status', '📊 View your payment summary', '📋 Review recent invoices', '👤 View your business profile', '', 'Just tell me what you need in plain English.'].join('\n');
+    case 'invoice_created': {
+      const invoice = artifact.invoice;
+      if (!invoice) return null;
+      return `✅ <b>Invoice created</b>\n\n${formatInvoiceBlock(invoice)}\n\n🔗 Your secure payment link is ready below.`;
+    }
+    default:
+      return null;
+  }
+}
+
+function formatGenericTelegramReply(text: string): string {
+  const cleaned = cleanTelegramText(text);
+  if (!cleaned) return '';
+  const escaped = telegramHtml(cleaned);
+  return /^(sure|okay|ok|done|completed|here|of course)/i.test(cleaned) ? `✨ ${escaped}` : escaped;
+}
+
+async function sendTelegramText(ctx: any, html: string) {
+  if (!html) return;
+  const max = 3900;
+  const lines = html.split('\n');
+  let chunk = '';
+  for (const line of lines) {
+    if ((chunk + (chunk ? '\n' : '') + line).length > max && chunk) {
+      await ctx.reply(chunk, { parse_mode: 'HTML' });
+      chunk = line;
+    } else {
+      chunk += (chunk ? '\n' : '') + line;
+    }
+  }
+  if (chunk) await ctx.reply(chunk, { parse_mode: 'HTML' });
 }
 
 async function askAgent(ctx: any, text: string) {
@@ -160,19 +261,22 @@ async function askAgent(ctx: any, text: string) {
     const reply = cleanTelegramText(result.reply);
     remember(telegramId, { role: 'assistant', content: reply });
 
-    const invoiceArtifact = (result.artifacts ?? []).find((a: any) => a?.action === 'invoice_created');
-    const recentInvoicesArtifact = (result.artifacts ?? []).find((a: any) => a?.action === 'recent_activity');
+    const artifacts = result.artifacts ?? [];
+    const invoiceArtifact = artifacts.find((a: any) => a?.action === 'invoice_created');
+    const recentInvoicesArtifact = artifacts.find((a: any) => a?.action === 'recent_activity');
+    const displayArtifact = [...artifacts].reverse().find((a: any) => ['invoice_status', 'invoice_detail', 'outstanding', 'payment_summary', 'help', 'invoice_created'].includes(a?.action));
 
     if (recentInvoicesArtifact) {
       await sendRecentInvoices(ctx, recentInvoicesArtifact);
-    } else if (reply) {
-      await ctx.reply(reply);
+    } else {
+      const formatted = formatArtifactReply(displayArtifact) || formatGenericTelegramReply(reply);
+      await sendTelegramText(ctx, formatted);
     }
 
     if (invoiceArtifact) await sendInvoiceArtifact(ctx, invoiceArtifact);
   } catch (err: any) {
     console.error('CeloDesk Telegram agent error:', err);
-    await ctx.reply('CeloDesk is temporarily busy. Please try again in a few seconds.');
+    await ctx.reply('⚠️ <b>CeloDesk is temporarily busy</b>\n\nPlease try again in a few seconds.');
   }
 }
 
@@ -189,16 +293,16 @@ bot.start(async (ctx) => {
   const telegramId = String(ctx.from.id);
   const existing = sessions.get(telegramId);
   if (existing) {
-    await ctx.reply('Welcome back to CeloDesk! 👋\n\nWhat would you like to do?', mainKeyboard);
+    await ctx.reply('👋 <b>Welcome back to CeloDesk</b>\n\nWhat would you like to do?', mainKeyboard);
     return;
   }
 
   const knownMerchantId = await getMerchantByTelegramId(telegramId);
   awaitingWallet.add(telegramId);
   if (knownMerchantId) {
-    await ctx.reply('Welcome back! Please reconnect your Celo wallet address to refresh your secure session:\n\nPaste the wallet address that receives your payments.');
+    await ctx.reply('👋 <b>Welcome back</b>\n\n🔐 Reconnect your Celo wallet to refresh your secure session.\n\nPaste the wallet address that receives your payments.');
   } else {
-    await ctx.reply('Welcome to CeloDesk! 👋\n\nI can create invoices, help you track payments, and manage your Celo payment desk.\n\nFirst, connect your receiving wallet by pasting its Celo address (starts with 0x).');
+    await ctx.reply('👋 <b>Welcome to CeloDesk</b>\n\n🧾 Create invoices\n💰 Track payments\n📊 Manage your payment desk\n\n🔐 First, connect your receiving wallet by pasting its Celo address (starts with 0x).');
   }
 });
 
@@ -220,7 +324,7 @@ bot.on('text', async (ctx) => {
 
   if (awaitingWallet.has(telegramId)) {
     if (!/^0x[a-fA-F0-9]{40}$/.test(text)) {
-      await ctx.reply('That does not look like a valid Celo wallet address. It should start with 0x and be 42 characters.');
+      await ctx.reply('⚠️ <b>Invalid wallet address</b>\n\nA Celo wallet address should start with <code>0x</code> and contain 42 characters. Please try again.');
       return;
     }
     try {
@@ -229,10 +333,10 @@ bot.on('text', async (ctx) => {
       sessions.set(telegramId, { merchantId: result.merchantId, token: result.token });
       histories.delete(telegramId);
       awaitingWallet.delete(telegramId);
-      await ctx.reply('Wallet linked successfully. You are ready to use CeloDesk. 👋\n\nTry “Create an invoice” or “Who still owes me?”', mainKeyboard);
+      await ctx.reply('✅ <b>Wallet connected</b>\n\nYou are ready to use CeloDesk. 👋\n\nTry <b>Create an invoice</b> or <b>Who still owes me?</b>', mainKeyboard);
     } catch (err: any) {
       console.error('Telegram wallet link error:', err);
-      await ctx.reply('I could not link that wallet. Please check the address and try again.');
+      await ctx.reply('❌ <b>Wallet connection failed</b>\n\nPlease check the address and try again.');
     }
     return;
   }
