@@ -4,13 +4,13 @@ dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 /**
  * Thin wrapper around the CeloDesk backend REST API. The bot never
  * implements financial logic itself — every action here is a direct
- * pass-through to the backend, per CLAUDE_3_AGENT.md's ownership rule.
+ * pass-through to the backend. Financial and payment logic remains in
+ * the backend rather than being duplicated inside the bot.
  *
- * AUTH: most calls now require an Authorization: Bearer <token> header
- * — the backend derives the true merchantId from that token rather
- * than trusting whatever's passed in the request body/query (see
- * SECURITY.md's IDOR fix). The token comes from telegram-link (see
- * linkTelegramWallet below), same JWT mechanism the web frontend uses.
+ * AUTH: protected calls use an Authorization: Bearer <token> header.
+ * The backend derives the true merchantId from that token rather than
+ * trusting a client-supplied merchantId. The token comes from the
+ * Telegram wallet-link flow and uses the same JWT mechanism as the web app.
  */
 
 const BASE_URL = process.env.BACKEND_API_URL ?? 'http://localhost:3001';
