@@ -222,8 +222,8 @@ function renderConsentPage(params: {
       Connected service: ${htmlEscape(BASE_URL)}
     </p>
   </div>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.min.js"></script>
 <script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.min.js"></script>
   const form = document.getElementById('consentForm');
   let signingInProgress = false;
 
@@ -554,16 +554,21 @@ export function mountOAuthRoutes(app: any): void {
       return;
     }
 
-    res.type('html').send(
-      renderConsentPage({
-        clientId,
-        redirectUri,
-        state,
-        codeChallenge,
-        scope: 'mcp',
-        resource,
-      }),
-    );
+    res
+      .set('Cache-Control', 'no-store, no-cache, must-revalidate')
+      .set('Pragma', 'no-cache')
+      .set('Expires', '0')
+      .type('html')
+      .send(
+        renderConsentPage({
+          clientId,
+          redirectUri,
+          state,
+          codeChallenge,
+          scope: 'mcp',
+          resource,
+        }),
+      );
   });
 
   app.post('/authorize', async (req: Request, res: Response) => {
