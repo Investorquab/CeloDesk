@@ -144,18 +144,18 @@ function invoiceStatusEmoji(status: unknown): string {
 
 function formatInvoice(invoice: any, detailed = false): string {
   const lines = [
-    `🧾 <b>${invoice.clientName || 'Invoice'}</b>`,
-    `💰 <b>Amount:</b> ${invoice.amount ?? '—'} ${invoice.tokenSymbol ?? ''}`,
-    `${invoiceStatusEmoji(invoice.status)} <b>Status:</b> ${invoice.status ?? '—'}`,
+    `🧾 **${invoice.clientName || 'Invoice'}**`,
+    `💰 **Amount:** ${invoice.amount ?? '—'} ${invoice.tokenSymbol ?? ''}`,
+    `${invoiceStatusEmoji(invoice.status)} **Status:** ${invoice.status ?? '—'}`,
   ];
 
-  if (invoice.description) lines.push(`📝 <b>Description:</b> ${invoice.description}`);
-  if (invoice.dueDate) lines.push(`📅 <b>Due:</b> ${invoice.dueDate}`);
-  if (invoice.id) lines.push(`🆔 <b>Invoice ID:</b> ${invoice.id}`);
-  if (invoice.publicUrl) lines.push(`🔗 <b>Payment link:</b> ${invoice.publicUrl}`);
+  if (invoice.description) lines.push(`📝 **Description:** ${invoice.description}`);
+  if (invoice.dueDate) lines.push(`📅 **Due:** ${invoice.dueDate}`);
+  if (invoice.id) lines.push(`🆔 **Invoice ID:** ${invoice.id}`);
+  if (invoice.publicUrl) lines.push(`🔗 **Payment link:** ${invoice.publicUrl}`);
 
   if (detailed && Array.isArray(invoice.payments) && invoice.payments.length) {
-    lines.push('', '💳 <b>Payments</b>');
+    lines.push('', '💳 **Payments**');
     for (const payment of invoice.payments) {
       lines.push(
         `• ${payment.amount ?? '—'} ${payment.tokenSymbol ?? ''} · ${payment.status ?? '—'}` +
@@ -164,43 +164,43 @@ function formatInvoice(invoice: any, detailed = false): string {
     }
   }
 
-  return lines.join('\\n');
+  return lines.join('\n');
 }
 
 function formatMcpResult(toolName: string, result: any): string {
   if (toolName === 'create_invoice') {
     return [
-      '🎉 <b>Invoice created successfully</b>',
+      '🎉 **Invoice created successfully**',
       '',
       formatInvoice(result, true),
       '',
       '💡 Share the payment link with your client to collect payment.',
-    ].join('\\n');
+    ].join('\n');
   }
 
   if (toolName === 'get_invoice') {
-    return ['📄 <b>Invoice details</b>', '', formatInvoice(result, true)].join('\\n');
+    return ['📄 **Invoice details**', '', formatInvoice(result, true)].join('\n');
   }
 
   if (toolName === 'get_invoice_status') {
     return [
-      '🔎 <b>Invoice status</b>',
+      '🔎 **Invoice status**',
       '',
-      `${invoiceStatusEmoji(result?.status)} <b>Status:</b> ${result?.status ?? 'Unknown'}`,
-    ].join('\\n');
+      `${invoiceStatusEmoji(result?.status)} **Status:** ${result?.status ?? 'Unknown'}`,
+    ].join('\n');
   }
 
   if (toolName === 'list_invoices') {
     const invoices = Array.isArray(result) ? result : [];
     if (!invoices.length) {
-      return '📋 <b>Invoices</b>\\n\\n🎉 No invoices found.';
+      return '📋 **Invoices**\n\n🎉 No invoices found.';
     }
 
     return [
-      `📋 <b>Invoices</b> · ${invoices.length} total`,
+      `📋 **Invoices** · ${invoices.length} total`,
       '',
       ...invoices.map((invoice: any) => formatInvoice(invoice)),
-    ].join('\\n\\n');
+    ].join('\n\n');
   }
 
   if (toolName === 'get_payment_summary') {
@@ -212,25 +212,25 @@ function formatMcpResult(toolName: string, result: any): string {
       .map(([token, amount]) => `• ${amount} ${token}`);
 
     return [
-      '📊 <b>Payment summary</b>',
+      '📊 **Payment summary**',
       '',
-      `🧾 <b>Total invoices:</b> ${result?.total ?? 0}`,
+      `🧾 **Total invoices:** ${result?.total ?? 0}`,
       ...(statusLines.length ? ['', ...statusLines] : []),
       '',
-      '💸 <b>Outstanding</b>',
+      '💸 **Outstanding**',
       ...(outstandingLines.length ? outstandingLines : ['🎉 Nothing outstanding.']),
-    ].join('\\n');
+    ].join('\n');
   }
 
   if (toolName === 'get_merchant_profile') {
     return [
-      '👤 <b>Merchant profile</b>',
+      '👤 **Merchant profile**',
       '',
-      `🏪 <b>Business:</b> ${result?.businessName || result?.profile?.businessName || 'Not set'}`,
-      `💼 <b>Wallet:</b> ${result?.walletAddress || '—'}`,
-      ...(result?.tagline ? [`✨ <b>Tagline:</b> ${result.tagline}`] : []),
-      ...(result?.websiteUrl ? [`🌐 <b>Website:</b> ${result.websiteUrl}`] : []),
-    ].join('\\n');
+      `🏪 **Business:** ${result?.businessName || result?.profile?.businessName || 'Not set'}`,
+      `💼 **Wallet:** ${result?.walletAddress || '—'}`,
+      ...(result?.tagline ? [`✨ **Tagline:** ${result.tagline}`] : []),
+      ...(result?.websiteUrl ? [`🌐 **Website:** ${result.websiteUrl}`] : []),
+    ].join('\n');
   }
 
   return typeof result === 'string'
@@ -240,7 +240,7 @@ function formatMcpResult(toolName: string, result: any): string {
 
 function formatMcpError(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : fallback;
-  return `⚠️ <b>Something went wrong</b>\\n\\n${message}\\n\\n💡 Please try again shortly.`;
+  return `⚠️ **Something went wrong**\n\n${message}\n\n💡 Please try again shortly.`;
 }
 
 function createServer() {
