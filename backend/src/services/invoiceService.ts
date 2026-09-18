@@ -188,6 +188,20 @@ export async function createPaymentIntent(invoiceId: string, payerAddress: strin
     throw new Error(`This invoice is ${invoice.status.toLowerCase()} and cannot accept a new payment intent.`);
   }
   const token = getToken(invoice.tokenSymbol);
+  const verifiedPayments = await prisma.payment.findMany({
+    where: { invoiceId, status: 'VERIFIED' },
+    select: { amount: true },
+  });
+  const expectedUnits = ethers.parseUnits(invoice.amount.toString(), token.decimals);
+  const paidUnits = verifiedPayments.reduce(
+    (sum, payment) => sum + ethers.parseUnits(payment.amount.toString(), token.decimals),
+    0n,
+  );
+  const remainingUnits = expectedUnits > paidUnits ? expectedUnits - paidUnits : 0n;
+  if (remainingUnits <= 0n) {
+    throw new Error('This invoice has already been fully paid.');
+  }
+
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error('Server misconfigured: JWT_SECRET is not set.');
   const expiresIn = 10 * 60;
@@ -196,5 +210,11 @@ export async function createPaymentIntent(invoiceId: string, payerAddress: strin
     secret,
     { expiresIn }
   );
-  return { intentId, expiresAt: new Date(Date.now() + expiresIn * 1000), invoice, token };
+  return {
+    intentId,
+    expiresAt: new Date(Date.now() + expiresIn * 1000),
+    invoice,
+    token,
+    paymentAmount: ethers.formatUnits(remainingUnits, token.decimals),
+  };
 }
