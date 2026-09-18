@@ -1,7 +1,7 @@
 export type InvoiceStatus = 'DRAFT'|'SENT'|'VIEWED'|'PENDING'|'PAID'|'PARTIALLY_PAID'|'OVERPAID'|'FAILED'|'CANCELLED'|'EXPIRED'|'OVERDUE';
 export type PaymentStatus = 'DETECTED'|'VERIFYING'|'VERIFIED'|'REJECTED';
 export type Token = {symbol:string; name:string; decimals:number};
-export type Payment = {id:string;txHash:string;chainId:number;fromAddress:string;toAddress:string;tokenAddress:string;amount:string;status:PaymentStatus;confirmations?:number;blockNumber?:number;rejectionReason?:string;detectedAt?:string;verifiedAt?:string};
+export type Payment = {id:string;txHash:string;chainId:number;fromAddress:string;toAddress:string;tokenAddress:string;tokenSymbol?:string;amount:string;status:PaymentStatus;confirmations?:number;blockNumber?:number;rejectionReason?:string;detectedAt?:string;verifiedAt?:string};
 export type Invoice = {id:string;publicSlug:string;merchantId:string;clientName:string;clientContact?:string|null;amount:string|number;tokenSymbol:string;tokenAddress:string;chainId:number;receivingWallet:string;description?:string|null;dueDate?:string|null;status:InvoiceStatus;createdAt:string;updatedAt?:string;merchantDisplay?:{name:string;logoUrl?:string|null};payments?:Payment[]};
 export type Merchant = {id:string;walletAddress:string;profile?:{businessName:string;slug?:string;tagline?:string|null;logoUrl?:string|null;description?:string|null;websiteUrl?:string|null;socialLinks?:Record<string,string>|null;preferredToken?:string;acceptedTokens?:string[]}|null};
 export type Summary = {total:number;byStatus:Record<string,number>;outstandingTotal:number;outstandingByToken?:Record<string,number>};
