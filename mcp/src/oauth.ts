@@ -493,6 +493,7 @@ export function mountOAuthRoutes(app: any): void {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-celodesk-mcp-token': getLegacyToken(),
           },
           body: JSON.stringify({
             walletAddress,
