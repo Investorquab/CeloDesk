@@ -167,11 +167,16 @@ router.post('/mcp-wallet', async (req, res) => {
   }
 
   try {
-    const normalizedWallet = ethers.getAddress(parsed.data.walletAddress);
     const { message, signature } = parsed.data;
-    if (!message.includes(normalizedWallet)) {
+    const claimedWallet = parsed.data.walletAddress.trim();
+
+    // Ethereum/Celo addresses are case-insensitive. Check the raw address
+    // case-insensitively before normalizing it for storage and identity.
+    if (!message.toLowerCase().includes(claimedWallet.toLowerCase())) {
       return res.status(401).json({ error: 'Signed message must include the wallet address.' });
     }
+
+    const normalizedWallet = ethers.getAddress(claimedWallet);
     const timestampMatch = message.match(/Timestamp:\s*(\d{4}-\d{2}-\d{2}T[^\n]+)/i);
     if (!timestampMatch) {
       return res.status(401).json({ error: 'Signed message must include a Timestamp.' });
