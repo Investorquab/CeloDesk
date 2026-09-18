@@ -283,20 +283,36 @@ router.post('/verify-payment', verifyPaymentLimiter, async (req, res) => {
     });
   }
 
-  const existingVerified = await prisma.payment.findMany({
-    where: { invoiceId: invoice.id, status: 'VERIFIED' },
-    select: { amount: true },
-  });
   const decimals = getToken(invoice.tokenSymbol).decimals;
   const expected = ethers.parseUnits(invoice.amount.toString(), decimals);
   const receivedUnits = ethers.parseUnits(result.amount, decimals);
-  const priorUnits = existingVerified.reduce((sum, p) => sum + ethers.parseUnits(p.amount.toString(), decimals), 0n);
-  const aggregate = priorUnits + receivedUnits;
-  const newStatus = aggregate > expected ? 'OVERPAID' : aggregate === expected ? 'PAID' : 'PARTIALLY_PAID';
+
+  let newStatus: 'PAID' | 'OVERPAID' | 'PARTIALLY_PAID';
+  let aggregate: bigint;
 
   try {
-    await prisma.$transaction([
-      prisma.payment.create({
+    // Serializable isolation prevents two simultaneous payment confirmations
+    // from both calculating the invoice status from the same stale balance.
+    const committed = await prisma.$transaction(async (tx) => {
+      const existingVerified = await tx.payment.findMany({
+        where: { invoiceId: invoice.id, status: 'VERIFIED' },
+        select: { amount: true },
+      });
+
+      const priorUnits = existingVerified.reduce(
+        (sum, p) => sum + ethers.parseUnits(p.amount.toString(), decimals),
+        0n,
+      );
+
+      aggregate = priorUnits + receivedUnits;
+      newStatus =
+        aggregate > expected
+          ? 'OVERPAID'
+          : aggregate === expected
+            ? 'PAID'
+            : 'PARTIALLY_PAID';
+
+      await tx.payment.create({
         data: {
           invoiceId: invoice.id,
           txHash,
@@ -310,14 +326,28 @@ router.post('/verify-payment', verifyPaymentLimiter, async (req, res) => {
           blockNumber: result.blockNumber,
           verifiedAt: new Date(),
         },
-      }),
-      prisma.invoice.update({
+      });
+
+      await tx.invoice.update({
         where: { id: invoice.id },
         data: { status: newStatus },
-      }),
-    ]);
+      });
+
+      return true;
+    }, { isolationLevel: 'Serializable' });
+
+    if (!committed) throw new Error('Payment transaction did not commit.');
   } catch (err: any) {
-    if (err.code === 'P2002') return res.status(409).json({ error: 'This transaction or payment intent has already been recorded.' });
+    if (err.code === 'P2002') {
+      return res.status(409).json({
+        error: 'This transaction or payment intent has already been recorded.',
+      });
+    }
+    if (err.code === 'P2034') {
+      return res.status(409).json({
+        error: 'Payment verification is being updated at the same time. Please try again.',
+      });
+    }
     throw err;
   }
 
