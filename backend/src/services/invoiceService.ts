@@ -279,8 +279,7 @@ export async function markInvoiceViewed(id: string) {
 // history and must survive regardless of invoice lifecycle changes.
 // A PAID (or OVERPAID) invoice cannot be cancelled through this path —
 // that would let a merchant hide a completed payment from their own
-// records, which is exactly the kind of "quietly editable financial
-// history" this product's SECURITY.md argues against.
+// records. Paid invoices therefore remain part of the financial history.
 export async function cancelInvoice(id: string) {
   const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id } });
   if (invoice.status === 'PAID' || invoice.status === 'OVERPAID') {
