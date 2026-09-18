@@ -169,8 +169,15 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
   if (status === 'outstanding') {
     return res.json(await listOutstandingInvoices(merchantId));
   }
-  const invoices = await prisma.invoice.findMany({ where: { merchantId } });
-  res.json(invoices);
+  const invoices = await prisma.invoice.findMany({ where: { merchantId }, include: { payments: true } });
+  const now = new Date();
+  const normalized = invoices.map((invoice) => {
+    if (invoice.dueDate && invoice.dueDate < now && ['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID'].includes(invoice.status)) {
+      return { ...invoice, status: 'OVERDUE' as const };
+    }
+    return invoice;
+  });
+  res.json(normalized);
 });
 
 // GET /api/invoices/summary/:merchantId — auth-gated, own-data only.
