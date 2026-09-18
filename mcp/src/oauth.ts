@@ -220,10 +220,31 @@ function renderConsentPage(params: {
   </div>
 <script>
   const form = document.getElementById('consentForm');
+  let signingInProgress = false;
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+
+    if (signingInProgress) return;
+    signingInProgress = true;
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Waiting for wallet...';
+      submitButton.style.opacity = '0.7';
+      submitButton.style.cursor = 'wait';
+    }
+
     const ethereum = window.ethereum;
     if (!ethereum || typeof ethereum.request !== 'function') {
+      signingInProgress = false;
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Allow CeloDesk';
+        submitButton.style.opacity = '1';
+        submitButton.style.cursor = 'pointer';
+      }
       alert('Please open this authorization page in a browser wallet or MiniPay so CeloDesk can verify wallet ownership.');
       return;
     }
@@ -241,6 +262,13 @@ function renderConsentPage(params: {
       document.getElementById('walletSignature').value = signature;
       form.submit();
     } catch (error) {
+      signingInProgress = false;
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Allow CeloDesk';
+        submitButton.style.opacity = '1';
+        submitButton.style.cursor = 'pointer';
+      }
       alert(error && error.message ? error.message : 'Wallet authorization was cancelled.');
     }
   });
