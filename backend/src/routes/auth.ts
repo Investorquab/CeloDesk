@@ -192,6 +192,11 @@ router.post('/mcp-wallet', async (req, res) => {
       return res.status(401).json({ error: 'Invalid wallet signature.' });
     }
     if (recoveredAddress.toLowerCase() !== normalizedWallet.toLowerCase()) {
+      // Safe diagnostic: log addresses only, never the signature or signed message.
+      console.warn('[MCP AUTH] signature mismatch', {
+        claimedWallet: normalizedWallet,
+        recoveredAddress,
+      });
       return res.status(401).json({ error: 'Signature does not match the claimed wallet address.' });
     }
 
