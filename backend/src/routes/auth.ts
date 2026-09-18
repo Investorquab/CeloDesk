@@ -32,6 +32,10 @@ const walletAuthLimiter = rateLimit({
 
 const SESSION_TTL = '7d';
 
+function sha256(value: string): string {
+  return crypto.createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
 function getJwtSecret(): string | undefined {
   return process.env.JWT_SECRET;
 }
@@ -169,6 +173,14 @@ router.post('/mcp-wallet', async (req, res) => {
   try {
     const { message, signature } = parsed.data;
     const claimedWallet = parsed.data.walletAddress.trim();
+
+    console.log('[MCP AUTH DEBUG] inbound', {
+      claimedWallet,
+      messageLength: message.length,
+      signatureLength: signature.length,
+      messageHash: sha256(message),
+      signatureHash: sha256(signature),
+    });
 
     // Ethereum/Celo addresses are case-insensitive. Check the raw address
     // case-insensitively before normalizing it for storage and identity.
