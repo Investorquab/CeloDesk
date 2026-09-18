@@ -14,8 +14,8 @@ function buildEvents(invoices:Invoice[],returnTo:string):EventItem[]{
   const payments=[...(i.payments||[])].sort((a,b)=>+new Date(b.verifiedAt||b.detectedAt||i.updatedAt||i.createdAt)-+new Date(a.verifiedAt||a.detectedAt||i.updatedAt||i.createdAt));
   for(const p of payments){
    const href=`/invoice/${i.publicSlug}?returnTo=${encodeURIComponent(returnTo)}`;
-   if(p.status==='VERIFIED') out.push({id:`${i.id}-payment-${p.id}`,kind:'paid',title:'Payment received',subtitle:p.fromAddress?`Verified from ${shortAddress(p.fromAddress)}`:'Verified on Celo',amount:`+${money(p.amount,i.tokenSymbol)}`,time:p.verifiedAt||p.detectedAt||i.updatedAt||i.createdAt,status:'Verified',href});
-   else if(p.status==='REJECTED') out.push({id:`${i.id}-payment-${p.id}`,kind:'failed',title:'Payment rejected',subtitle:p.rejectionReason||'Payment did not match this invoice',amount:money(p.amount,i.tokenSymbol),time:p.detectedAt||i.updatedAt||i.createdAt,status:'Failed',href});
+   if(p.status==='VERIFIED') out.push({id:`${i.id}-payment-${p.id}`,kind:'paid',title:'Payment received',subtitle:p.fromAddress?`Verified from ${shortAddress(p.fromAddress)}`:'Verified on Celo',amount:`+${money(p.amount,p.tokenSymbol||i.tokenSymbol)}`,time:p.verifiedAt||p.detectedAt||i.updatedAt||i.createdAt,status:'Verified',href});
+   else if(p.status==='REJECTED') out.push({id:`${i.id}-payment-${p.id}`,kind:'failed',title:'Payment rejected',subtitle:p.rejectionReason||'Payment did not match this invoice',amount:money(p.amount,p.tokenSymbol||i.tokenSymbol),time:p.detectedAt||i.updatedAt||i.createdAt,status:'Failed',href});
    else if(p.status==='DETECTED'||p.status==='VERIFYING') out.push({id:`${i.id}-payment-${p.id}`,kind:'pending',title:'Payment pending',subtitle:'Waiting for payment verification',amount:money(p.amount,i.tokenSymbol),time:p.detectedAt||i.updatedAt||i.createdAt,status:'Pending',href});
   }
  }
