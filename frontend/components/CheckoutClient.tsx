@@ -14,7 +14,7 @@ function decimalToAtomic(value:string|number,decimals:number){
  if(!/^\d+(\.\d+)?$/.test(normalized))return '0';
  const [whole,fraction='']=normalized.split('.');
  const padded=(fraction+'0'.repeat(decimals)).slice(0,decimals);
- return (BigInt(whole)*BigInt(10)**BigInt(decimals)+BigInt(padded||'0')).toString();
+ let scale=BigInt(1); for(let i=0;i<decimals;i++)scale*=BigInt(10); return (BigInt(whole)*scale+BigInt(padded||'0')).toString();
 }
 function paymentQrValue(invoice:Invoice){
  const decimals={USDm:18,USDC:6,USDT:6,NGNm:18}[invoice.tokenSymbol]??6;
