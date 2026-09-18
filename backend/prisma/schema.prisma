@@ -1,5 +1,4 @@
-// quabagent — canonical database schema
-// See docs/DATABASE.md for field-by-field rationale.
+// Canonical CeloDesk database schema.
 
 generator client {
   provider = "prisma-client-js"
