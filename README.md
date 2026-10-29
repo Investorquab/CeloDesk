@@ -207,6 +207,26 @@ Local currency is threaded through every surface:
 
 ---
 
+## Track 2: Open corridors with USA₮ over x402
+
+**Who it serves.** Cross-border settlement between independent parties, including machine-to-machine and agent-to-agent payments, where a US dollar settlement asset is the right unit of account and gas should not be the payer's problem.
+
+**Why USA₮ and x402.** USA₮ (Tether America USD, issued by Anchorage Digital Bank) is a US-regulated dollar stablecoin on Celo, settled through the hosted **x402 facilitator** with the gasless **EIP-3009 `transferWithAuthorization`** scheme: the payer signs an authorization off-chain, the facilitator submits it on-chain and pays the gas, and funds move payer to merchant directly. Nobody custodies the payment, and the payer needs no CELO for gas.
+
+**What CeloDesk does.** A merchant issues a USA₮ invoice; a paying agent can settle it over x402:
+
+1. `GET /api/x402/invoices/:id/requirements` returns the x402 payment requirements (payTo = merchant wallet, asset = USA₮, amount in atomic units).
+2. The payer signs an EIP-3009 authorization and POSTs the x402 payload to `/api/x402/invoices/:id/pay`.
+3. CeloDesk calls the facilitator `/verify`, then `/settle`, records the payment, and marks the invoice paid.
+
+The buyer side is demonstrated by `backend/scripts/x402-pay.ts` (`npm run x402-pay -- <invoiceId>`), which signs and submits as an independent payer.
+
+The facilitator is `https://api.x402.celo.org` (mainnet), confirmed to settle USA₮ via `GET /supported`. Settlement is gas at cost plus 0.3%, with a free-credit allowance.
+
+**Attribution note.** x402 settlements through the hosted facilitator cannot carry an attribution tag. For this lane the organisers record the merchant **PayTo wallet** (the invoice receiving wallet) instead. CeloDesk's agent-wallet attribution requirement is satisfied separately by a tagged transaction from the agent wallet (see the ERC-8004 section).
+
+---
+
 ## 🧪 Current product status
 
 ### Working and tested

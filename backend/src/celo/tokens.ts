@@ -63,6 +63,18 @@ export const CELO_TOKENS: Record<string, TokenInfo> = {
     fiatCurrency: 'USD',
     locale: 'en-US',
   },
+  // USA₮ (Tether America USD) by Anchorage Digital Bank. 6 decimals.
+  // Settlement token for the Track 2 x402 lane (see src/x402/). Payable
+  // either by a normal tagged transfer or gaslessly over x402.
+  USAT: {
+    symbol: 'USAT',
+    name: 'USA Tether (USA₮)',
+    address: '0xD2ab3C9A02DBBAB236BfEC45D1d755DF4267F771',
+    decimals: 6,
+    verified: true,
+    fiatCurrency: 'USD',
+    locale: 'en-US',
+  },
   // Mento Nigerian Naira (what the hackathon page calls "cNGN").
   NGNm: {
     symbol: 'NGNm',

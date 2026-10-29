@@ -8,6 +8,7 @@ import { router as tokenRouter } from './routes/tokens';
 import { router as authRouter } from './routes/auth';
 import { router as merchantRouter } from './routes/merchants';
 import { router as agentRouter } from './routes/agent';
+import { router as x402Router } from './routes/x402';
 import { assertAttributionIntegrity, HACKATHON_ATTRIBUTION_TAG } from './services/attribution';
 
 // Refuse to start if the attribution tag is wrong or no longer encodes to
@@ -39,6 +40,7 @@ app.use('/api/tokens', tokenRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/merchants', merchantRouter);
 app.use('/api/agent', agentRouter);
+app.use('/api/x402', x402Router);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

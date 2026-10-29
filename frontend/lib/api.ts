@@ -33,7 +33,7 @@ export const api={
 // registry (src/celo/tokens.ts) so money() can stay synchronous. wFIAT
 // amounts render in their own currency, e.g. wBRL -> "R$ 1.500,00 wBRL".
 const TOKEN_DISPLAY:Record<string,{currency:string;locale:string}>={
- USDm:{currency:'USD',locale:'en-US'},USDC:{currency:'USD',locale:'en-US'},USDT:{currency:'USD',locale:'en-US'},
+ USDm:{currency:'USD',locale:'en-US'},USDC:{currency:'USD',locale:'en-US'},USDT:{currency:'USD',locale:'en-US'},USAT:{currency:'USD',locale:'en-US'},
  NGNm:{currency:'NGN',locale:'en-NG'},
  wBRL:{currency:'BRL',locale:'pt-BR'},wARS:{currency:'ARS',locale:'es-AR'},wMXN:{currency:'MXN',locale:'es-MX'},
  wCOP:{currency:'COP',locale:'es-CO'},wCLP:{currency:'CLP',locale:'es-CL'},wPEN:{currency:'PEN',locale:'es-PE'},

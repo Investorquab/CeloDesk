@@ -119,6 +119,7 @@ function normalizeToken(value: string | undefined) {
   // Exact symbol match against the verified registry (case-insensitive).
   const exact = SUPPORTED_TOKENS.find((s) => s.toLowerCase() === v);
   if (exact) return exact;
+  if (['usat', 'usa tether', 'tether america', 'tether america usd'].includes(v)) return 'USAT';
   if (['usdt', 'tether', 'tether usd', 'usd t'].includes(v)) return 'USDT';
   if (['usdc', 'usd coin'].includes(v)) return 'USDC';
   if (['usdm', 'mento dollar', 'mento usd'].includes(v)) return 'USDm';
