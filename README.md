@@ -179,6 +179,34 @@ The AI does not get to simply declare an invoice paid. The payment state comes f
 
 ---
 
+## Track 1: Local currencies for LatAm (Ripio wFIAT)
+
+**Who it serves.** A freelancer in Sao Paulo, a designer in Buenos Aires, a small shop in Bogota. They price their work in reais, pesos or soles, their clients think in those currencies, and their costs are in those currencies. Being paid in a US dollar stablecoin forces everyone to do mental FX on every invoice and absorb conversion spread twice.
+
+**Why local currency matters.** When the invoice, the payment and the record are all in the merchant's own currency, there is nothing to convert and nothing to reconcile against a moving exchange rate. The amount a client sees is the amount the merchant quoted, down to the centavo.
+
+**What CeloDesk does.** Merchants can invoice and settle in **Ripio wFIAT** stablecoins, each pegged to a local currency and issued natively on Celo:
+
+| Token | Currency | Example display |
+|-------|----------|-----------------|
+| wBRL  | Brazilian real    | R$ 1.500,00 |
+| wARS  | Argentine peso     | $ 25.000,00 |
+| wMXN  | Mexican peso       | $349.50 |
+| wCOP  | Colombian peso     | COP amounts |
+| wCLP  | Chilean peso       | CLP amounts |
+| wPEN  | Peruvian sol       | S/ amounts |
+
+All six are 18-decimal ERC-20s whose addresses were taken from the [Celo stablecoin contracts reference](https://docs.celo.org/build/tools/contracts/stablecoin-contracts) and verified on-chain before being added to the registry (`backend/src/celo/tokens.ts`).
+
+Local currency is threaded through every surface:
+
+- **Web app** — amounts render in the token's own currency (for example `R$ 1.500,00 wBRL`) on the checkout page, dashboard and activity feed.
+- **Telegram** — the invoice card and the assistant speak the local currency; a merchant can say "invoice 500 reais to Joao" and get a wBRL invoice.
+- **MCP / Claude** — the same tokens are available to external assistants, validated against the verified registry.
+- **"Who owes me" and summaries** are reported per currency and never summed across currencies, because wBRL, wARS and USDC are not interchangeable one-to-one.
+
+---
+
 ## 🧪 Current product status
 
 ### Working and tested

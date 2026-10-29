@@ -273,7 +273,14 @@ function createServer() {
           z.number().positive(),
           z.string().regex(/^\d+(\.\d{1,6})?$/),
         ]),
-        tokenSymbol: z.enum(['USDT', 'USDC', 'USDm', 'NGNm']),
+        tokenSymbol: z
+          .string()
+          .min(2)
+          .describe(
+            'Payment token symbol: USDm, USDC, USDT, NGNm, or a Ripio wFIAT ' +
+              'LatAm currency (wBRL, wARS, wMXN, wCOP, wCLP, wPEN). The backend ' +
+              'validates it against the verified token registry.',
+          ),
         description: z.string().min(1).max(500),
         dueDate: z.string().optional(),
       }),

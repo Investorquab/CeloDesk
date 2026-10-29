@@ -17,6 +17,29 @@ function esc(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Local-currency display for Celo stablecoins (mirrors backend src/celo/tokens.ts
+// and the frontend). wFIAT amounts render in their own currency, e.g.
+// wBRL -> "R$ 1.500,00 wBRL", so LatAm merchants see a familiar amount.
+const TOKEN_DISPLAY: Record<string, { currency: string; locale: string }> = {
+  USDm: { currency: 'USD', locale: 'en-US' }, USDC: { currency: 'USD', locale: 'en-US' }, USDT: { currency: 'USD', locale: 'en-US' },
+  NGNm: { currency: 'NGN', locale: 'en-NG' },
+  wBRL: { currency: 'BRL', locale: 'pt-BR' }, wARS: { currency: 'ARS', locale: 'es-AR' }, wMXN: { currency: 'MXN', locale: 'es-MX' },
+  wCOP: { currency: 'COP', locale: 'es-CO' }, wCLP: { currency: 'CLP', locale: 'es-CL' }, wPEN: { currency: 'PEN', locale: 'es-PE' },
+};
+
+function formatAmount(amount: string, symbol: string): string {
+  const d = TOKEN_DISPLAY[symbol];
+  const n = Number(amount);
+  if (d && Number.isFinite(n)) {
+    try {
+      return `${new Intl.NumberFormat(d.locale, { style: 'currency', currency: d.currency }).format(n)} ${symbol}`;
+    } catch {
+      // fall through
+    }
+  }
+  return `${amount} ${symbol}`;
+}
+
 export async function renderTelegramInvoiceCard(data: TelegramInvoiceCard): Promise<Buffer> {
   const qrData = await QRCode.toDataURL(data.paymentQrValue, { margin: 1, width: 380, errorCorrectionLevel: 'M' });
   const logoPath = path.resolve(process.cwd(), 'src/assets/celodesk-logo.png');
@@ -47,7 +70,7 @@ export async function renderTelegramInvoiceCard(data: TelegramInvoiceCard): Prom
     <text x="105" y="438" font-family="Arial, sans-serif" font-size="21" fill="#64736d">${esc(description)}</text>
 
     <text x="105" y="510" font-family="Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2" fill="#71837b">AMOUNT DUE</text>
-    <text x="105" y="590" font-family="Arial, sans-serif" font-size="70" font-weight="800" fill="#10221c">${esc(data.amount)} ${esc(data.tokenSymbol)}</text>
+    <text x="105" y="590" font-family="Arial, sans-serif" font-size="70" font-weight="800" fill="#10221c">${esc(formatAmount(data.amount, data.tokenSymbol))}</text>
     <text x="105" y="630" font-family="Arial, sans-serif" font-size="19" fill="#64736d">${esc(due)}</text>
 
     <line x1="105" y1="680" x2="900" y2="680" stroke="#dce9e3" stroke-width="2"/>

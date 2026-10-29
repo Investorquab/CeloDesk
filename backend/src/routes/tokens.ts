@@ -13,6 +13,9 @@ router.get('/', (_req, res) => {
     symbol: t.symbol,
     name: t.name,
     decimals: t.decimals,
+    fiatCurrency: t.fiatCurrency ?? null,
+    locale: t.locale ?? null,
+    local: t.local ?? false,
   }));
   res.json(tokens);
 });

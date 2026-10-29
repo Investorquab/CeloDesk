@@ -1,6 +1,6 @@
 export type InvoiceStatus = 'DRAFT'|'SENT'|'VIEWED'|'PENDING'|'PAID'|'PARTIALLY_PAID'|'OVERPAID'|'FAILED'|'CANCELLED'|'EXPIRED'|'OVERDUE';
 export type PaymentStatus = 'DETECTED'|'VERIFYING'|'VERIFIED'|'REJECTED';
-export type Token = {symbol:string; name:string; decimals:number};
+export type Token = {symbol:string; name:string; decimals:number; fiatCurrency?:string|null; locale?:string|null; local?:boolean};
 export type Payment = {id:string;txHash:string;chainId:number;fromAddress:string;toAddress:string;tokenAddress:string;tokenSymbol?:string;amount:string;status:PaymentStatus;confirmations?:number;blockNumber?:number;rejectionReason?:string;detectedAt?:string;verifiedAt?:string};
 export type Invoice = {id:string;publicSlug:string;merchantId:string;clientName:string;clientContact?:string|null;amount:string|number;tokenSymbol:string;tokenAddress:string;chainId:number;receivingWallet:string;description?:string|null;dueDate?:string|null;status:InvoiceStatus;createdAt:string;updatedAt?:string;merchantDisplay?:{name:string;logoUrl?:string|null};payments?:Payment[]};
 export type Merchant = {id:string;walletAddress:string;profile?:{businessName:string;slug?:string;tagline?:string|null;logoUrl?:string|null;description?:string|null;websiteUrl?:string|null;socialLinks?:Record<string,string>|null;preferredToken?:string;acceptedTokens?:string[]}|null};
@@ -29,5 +29,18 @@ export const api={
  getSummary:(merchantId:string)=>request<Summary>(`/api/invoices/summary/${encodeURIComponent(merchantId)}`),
  agent:(merchantId:string,message:string,history:{role:'user'|'assistant';content:string}[]=[])=>request<{reply:string;artifacts:any[]}>(`/api/agent`,{method:'POST',body:JSON.stringify({message,history})}),
 };
-export function money(amount:string|number,symbol:string){return `${Number(amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} ${symbol}`}
+// Local-currency display for Celo stablecoins. Mirrors the backend token
+// registry (src/celo/tokens.ts) so money() can stay synchronous. wFIAT
+// amounts render in their own currency, e.g. wBRL -> "R$ 1.500,00 wBRL".
+const TOKEN_DISPLAY:Record<string,{currency:string;locale:string}>={
+ USDm:{currency:'USD',locale:'en-US'},USDC:{currency:'USD',locale:'en-US'},USDT:{currency:'USD',locale:'en-US'},
+ NGNm:{currency:'NGN',locale:'en-NG'},
+ wBRL:{currency:'BRL',locale:'pt-BR'},wARS:{currency:'ARS',locale:'es-AR'},wMXN:{currency:'MXN',locale:'es-MX'},
+ wCOP:{currency:'COP',locale:'es-CO'},wCLP:{currency:'CLP',locale:'es-CL'},wPEN:{currency:'PEN',locale:'es-PE'},
+};
+export function money(amount:string|number,symbol:string){
+ const d=TOKEN_DISPLAY[symbol];const n=Number(amount);
+ if(d&&Number.isFinite(n)){try{return `${new Intl.NumberFormat(d.locale,{style:'currency',currency:d.currency}).format(n)} ${symbol}`}catch{}}
+ return `${n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} ${symbol}`;
+}
 export function shortAddress(a:string){return a?`${a.slice(0,6)}…${a.slice(-4)}`:''}

@@ -5,10 +5,17 @@ import { createInvoice, getInvoice, listOutstandingInvoices, getPaymentSummary, 
 import { ethers } from 'ethers';
 import { getToken } from '../celo/tokens';
 import { getMerchant } from '../services/merchantService';
+import { CELO_TOKENS, formatTokenAmount } from '../celo/tokens';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 export const router = Router();
+
+// Single source of truth for which tokens the agent may use — derived from
+// the verified registry so it can never drift from src/celo/tokens.ts.
+const SUPPORTED_TOKENS = Object.keys(CELO_TOKENS);
+const USD_TOKENS = Object.values(CELO_TOKENS).filter(t => t.fiatCurrency === 'USD').map(t => t.symbol);
+const LOCAL_TOKENS = Object.values(CELO_TOKENS).filter(t => t.local).map(t => t.symbol);
 
 const agentRequestSchema = z.object({
   message: z.string().min(1).max(4000),
@@ -20,13 +27,13 @@ const tools = [
     type: 'function',
     function: {
       name: 'create_invoice',
-      description: 'Create a CeloDesk payment invoice for the authenticated merchant. Use this when the merchant explicitly asks to create an invoice AND the payment token is known. Never create an invoice without a client name, amount, and explicit token. If the amount is described only as dollars/$/USD and no token is named, ask which supported token the merchant wants: USDm, USDC, or USDT. Do not silently choose a default token for an ambiguous dollar amount.',
+      description: 'Create a CeloDesk payment invoice for the authenticated merchant. Use this when the merchant explicitly asks to create an invoice AND the payment token is known. Never create an invoice without a client name, amount, and explicit token. If the amount is described only as dollars/$/USD and no token is named, ask which supported token the merchant wants: USDm, USDC, or USDT. For a local LatAm currency (Brazilian real, Argentine peso, Mexican peso, Colombian peso, Chilean peso, Peruvian sol) use the matching Ripio wFIAT token (wBRL, wARS, wMXN, wCOP, wCLP, wPEN). Do not silently choose a default token for an ambiguous amount.',
       parameters: {
         type: 'object',
         properties: {
           clientName: { type: 'string', description: 'Name of the person or business being billed.' },
           amount: { type: 'string', description: 'Invoice amount as a decimal string, e.g. 405 or 150.50.' },
-          tokenSymbol: { type: 'string', enum: ['USDm', 'USDC', 'USDT', 'NGNm'], description: 'Payment token. Must be explicitly known before creating an invoice.' },
+          tokenSymbol: { type: 'string', enum: SUPPORTED_TOKENS, description: 'Payment token. Must be explicitly known before creating an invoice.' },
           description: { type: 'string', description: 'What the invoice is for.' },
           clientContact: { type: 'string', description: 'Optional client email or contact.' },
           dueDate: { type: 'string', description: 'Optional ISO due date.' },
@@ -109,10 +116,21 @@ function json(value: unknown) {
 function normalizeToken(value: string | undefined) {
   if (!value) return '';
   const v = value.toLowerCase().replace(/₮/g, 't').trim();
+  // Exact symbol match against the verified registry (case-insensitive).
+  const exact = SUPPORTED_TOKENS.find((s) => s.toLowerCase() === v);
+  if (exact) return exact;
   if (['usdt', 'tether', 'tether usd', 'usd t'].includes(v)) return 'USDT';
   if (['usdc', 'usd coin'].includes(v)) return 'USDC';
   if (['usdm', 'mento dollar', 'mento usd'].includes(v)) return 'USDm';
-  if (['ngnm', 'mento naira', 'mento nigerian naira'].includes(v)) return 'NGNm';
+  if (['ngnm', 'mento naira', 'mento nigerian naira', 'naira'].includes(v)) return 'NGNm';
+  // Ripio wFIAT LatAm local currencies — one token per currency, so these
+  // natural-language names are unambiguous (unlike a bare "dollar").
+  if (['wbrl', 'brl', 'real', 'reais', 'brazilian real', 'real brasileiro', 'real brasileño'].includes(v)) return 'wBRL';
+  if (['wars', 'ars', 'peso argentino', 'argentine peso', 'argentinian peso'].includes(v)) return 'wARS';
+  if (['wmxn', 'mxn', 'peso mexicano', 'mexican peso'].includes(v)) return 'wMXN';
+  if (['wcop', 'cop', 'peso colombiano', 'colombian peso'].includes(v)) return 'wCOP';
+  if (['wclp', 'clp', 'peso chileno', 'chilean peso'].includes(v)) return 'wCLP';
+  if (['wpen', 'pen', 'sol', 'sol peruano', 'peruvian sol'].includes(v)) return 'wPEN';
   return value;
 }
 
@@ -143,7 +161,7 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
       if (!clientName || !amount || !/^\d+(?:\.\d+)?$/.test(amount) || Number(amount) <= 0) throw new Error('A valid positive invoice amount and client name are required.');
       const merchant = await getMerchant(merchantId);
       const tokenSymbol = normalizeToken(args.tokenSymbol);
-      if (!tokenSymbol || !['USDm', 'USDC', 'USDT', 'NGNm'].includes(tokenSymbol)) throw new Error('Please choose a supported payment token before creating the invoice.');
+      if (!tokenSymbol || !SUPPORTED_TOKENS.includes(tokenSymbol)) throw new Error('Please choose a supported payment token before creating the invoice.');
       const invoice = await createInvoice({
         merchantId,
         clientName,
@@ -155,12 +173,12 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
       });
       return {
         action: 'invoice_created',
-        invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), tokenSymbol: invoice.tokenSymbol, description: invoice.description, status: invoice.status, publicUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoice/${invoice.publicSlug}`, paymentQrValue: `ethereum:${invoice.tokenAddress}@${invoice.chainId}/transfer?address=${invoice.receivingWallet}&uint256=${ethers.parseUnits(invoice.amount.toString(), getToken(invoice.tokenSymbol).decimals).toString()}` },
+        invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), amountDisplay: formatTokenAmount(invoice.tokenSymbol, invoice.amount.toString()), tokenSymbol: invoice.tokenSymbol, description: invoice.description, status: invoice.status, publicUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoice/${invoice.publicSlug}`, paymentQrValue: `ethereum:${invoice.tokenAddress}@${invoice.chainId}/transfer?address=${invoice.receivingWallet}&uint256=${ethers.parseUnits(invoice.amount.toString(), getToken(invoice.tokenSymbol).decimals).toString()}` },
       };
     }
     case 'list_outstanding_invoices': {
       const rows = await listOutstandingInvoices(merchantId);
-      return { action: 'outstanding', invoices: rows.map(i => ({ id: i.id, publicSlug: i.publicSlug, clientName: i.clientName, amount: i.amount.toString(), tokenSymbol: i.tokenSymbol, description: i.description, status: i.status, dueDate: i.dueDate })) };
+      return { action: 'outstanding', invoices: rows.map(i => ({ id: i.id, publicSlug: i.publicSlug, clientName: i.clientName, amount: i.amount.toString(), amountDisplay: formatTokenAmount(i.tokenSymbol, i.amount.toString()), tokenSymbol: i.tokenSymbol, description: i.description, status: i.status, dueDate: i.dueDate })) };
     }
     case 'get_invoice': {
       const invoice = await findInvoiceForMerchant(merchantId, args);
@@ -186,7 +204,15 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
     }
     case 'get_payment_summary': {
       const summary = await getPaymentSummary(merchantId);
-      return { action: 'payment_summary', summary };
+      // Per-token totals formatted in each token's own currency, so a LatAm
+      // merchant sees e.g. { wBRL: "R$ 1.500,00 wBRL" } and we never sum
+      // across currencies.
+      const outstandingByTokenDisplay = summary.outstandingByToken
+        ? Object.fromEntries(
+            Object.entries(summary.outstandingByToken).map(([sym, amt]) => [sym, formatTokenAmount(sym, amt as number)])
+          )
+        : {};
+      return { action: 'payment_summary', summary: { ...summary, outstandingByTokenDisplay } };
     }
     case 'list_recent_activity': {
       const limit = Math.min(10, Math.max(1, Number(args.limit) || 6));
@@ -215,13 +241,15 @@ Rules:
 - Use tools for any question about the merchant's actual invoices, payments, profile, balances or activity. Never invent financial data.
 - Use create_invoice only when the user explicitly asks to create an invoice. Do not create one merely because they are discussing an invoice.
 - Never create an invoice until a payment token is explicitly known. If the user gives an amount in dollars, $, or USD but does not name a specific token, ask which token they want: USDm, USDC, or USDT. Do not infer USDm from a dollar amount. NGNm should only be used when explicitly selected/named.
-- Understand normal token names including USDT, USD₮, Tether, Tether USD, USDC, USD Coin, USDm, Mento Dollar, Mento USD, NGNm, Mento Naira and Mento Nigerian Naira.
+- CeloDesk supports LatAm local currencies via Ripio wFIAT. When the user asks to invoice in a local currency, use the matching token: Brazilian real -> wBRL, Argentine peso -> wARS, Mexican peso -> wMXN, Colombian peso -> wCOP, Chilean peso -> wCLP, Peruvian sol -> wPEN. Each local currency maps to exactly one token, so "500 reais" or "invoice 20000 pesos argentinos" unambiguously means wBRL / wARS.
+- Understand normal token names including USDT, USD₮, Tether, USDC, USD Coin, USDm, Mento Dollar, NGNm, Mento Naira, and the Ripio wFIAT names (wBRL/real/reais, wARS/peso argentino, wMXN/peso mexicano, wCOP/peso colombiano, wCLP/peso chileno, wPEN/sol).
 - Never claim an invoice is paid unless backend data says PAID or OVERPAID.
 - Never move funds, sign transactions, or ask for a private key.
 - If required information is missing for creation, ask only for the missing information, one focused question at a time when practical.
 - Keep answers short and useful. When a tool returns invoice rows, summarize the important details and let the UI render interactive rows.
 - For 'who still owes me?' call list_outstanding_invoices.
-- For 'how much am I owed?' call get_payment_summary; do not add different token balances together as if they were the same currency.
+- For 'how much am I owed?' call get_payment_summary; do not add different token balances together as if they were the same currency. Use outstandingByTokenDisplay for per-currency totals.
+- When stating an invoice amount, prefer the amountDisplay field (already formatted in the invoice's own local currency, e.g. "R$ 1.500,00 wBRL") over the raw amount.
 - For 'has David paid?' use get_invoice with clientName when an invoice ID is not provided.
 `;
 
