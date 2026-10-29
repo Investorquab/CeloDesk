@@ -27,3 +27,9 @@ Thumbs.db
 .vscode/
 .idea/
 mcp/dist/
+
+# Agent tooling and private strategy (never commit)
+CLAUDE.md
+.claude/
+.agents/
+skills-lock.json
