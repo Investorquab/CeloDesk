@@ -1,0 +1,18 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "CeloDesk",
+  "description": "AI stablecoin payments agent on Celo. Create, share, verify and settle invoices in Celo stablecoins and Ripio wFIAT LatAm local currencies, over web, Telegram and MCP, with a USA₮ settlement lane over x402.",
+  "image": "https://celo-desk.vercel.app/celodesk-logo.png",
+  "services": [
+    { "name": "web", "endpoint": "https://celo-desk.vercel.app" },
+    { "name": "MCP", "endpoint": "https://mcp.185-7-81-139.sslip.io/mcp", "version": "2025-06-18" },
+    { "name": "A2A", "endpoint": "https://celo-desk.vercel.app/.well-known/agent-card.json", "version": "0.3.0" },
+    { "name": "wallet", "endpoint": "eip155:42220:0x00d1E86040d88397F4eB187c38dC527F6659e486" }
+  ],
+  "x402Support": true,
+  "active": true,
+  "supportedTrust": ["reputation"],
+  "registrations": [
+    { "agentId": 9799, "agentRegistry": "eip155:42220:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" }
+  ]
+}

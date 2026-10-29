@@ -11,6 +11,7 @@
     "prisma:migrate": "node scripts/with-env.js npx prisma migrate dev",
     "verify-tag": "tsx scripts/verify-tag.ts",
     "x402-pay": "tsx scripts/x402-pay.ts",
+    "erc8004": "tsx scripts/erc8004-set-uri.ts",
     "test": "vitest run"
   },
   "dependencies": {
