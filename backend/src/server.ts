@@ -8,6 +8,12 @@ import { router as tokenRouter } from './routes/tokens';
 import { router as authRouter } from './routes/auth';
 import { router as merchantRouter } from './routes/merchants';
 import { router as agentRouter } from './routes/agent';
+import { assertAttributionIntegrity, HACKATHON_ATTRIBUTION_TAG } from './services/attribution';
+
+// Refuse to start if the attribution tag is wrong or no longer encodes to
+// the Loops-issued data suffix. An untagged/mis-tagged deploy would make
+// every transaction uncreditable, so this is a hard fail, not a warning.
+assertAttributionIntegrity();
 
 const app = express();
 const allowedOrigins = new Set(
@@ -39,4 +45,5 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 app.listen(port, () => {
   console.log(`CeloDesk backend listening on port ${port}`);
+  console.log(`Attribution tag active: ${HACKATHON_ATTRIBUTION_TAG}`);
 });

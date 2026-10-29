@@ -84,7 +84,7 @@ model Invoice {
 
   status          InvoiceStatus @default(DRAFT)
 
-  attributionTag  String        @default("celo_5ad8f72f8a99")
+  attributionTag  String        @default("celo_3fce81a170fc") // Agents on Open Rails tag; app always sets this explicitly in createInvoice
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

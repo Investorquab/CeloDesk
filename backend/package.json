@@ -1,7 +1,7 @@
 {
   "name": "celodesk-backend",
   "version": "0.1.0",
-  "description": "Backend core for CeloDesk \u2014 AI-powered stablecoin invoicing on Celo (Agents at Work Hackathon, Real World Adoption track)",
+  "description": "Backend core for CeloDesk - AI-powered stablecoin invoicing on Celo (Agents on Open Rails)",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "prisma:generate": "node scripts/with-env.js npx prisma generate",
     "prisma:migrate": "node scripts/with-env.js npx prisma migrate dev",
+    "verify-tag": "tsx scripts/verify-tag.ts",
     "test": "vitest run"
   },
   "dependencies": {
