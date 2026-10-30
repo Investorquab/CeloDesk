@@ -9,7 +9,9 @@ import { router as authRouter } from './routes/auth';
 import { router as merchantRouter } from './routes/merchants';
 import { router as agentRouter } from './routes/agent';
 import { router as x402Router } from './routes/x402';
+import { router as internalRouter } from './routes/internal';
 import { assertAttributionIntegrity, HACKATHON_ATTRIBUTION_TAG } from './services/attribution';
+import { startRecurrenceScheduler } from './services/recurrence';
 
 // Refuse to start if the attribution tag is wrong or no longer encodes to
 // the Loops-issued data suffix. An untagged/mis-tagged deploy would make
@@ -41,6 +43,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/merchants', merchantRouter);
 app.use('/api/agent', agentRouter);
 app.use('/api/x402', x402Router);
+app.use('/api/internal', internalRouter);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
@@ -48,4 +51,7 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 app.listen(port, () => {
   console.log(`CeloDesk backend listening on port ${port}`);
   console.log(`Attribution tag active: ${HACKATHON_ATTRIBUTION_TAG}`);
+  // Recurring invoices: spawn each due cycle and notify. Safe to run in this
+  // single backend process; disable with RECURRENCE_DISABLED=1.
+  startRecurrenceScheduler();
 });

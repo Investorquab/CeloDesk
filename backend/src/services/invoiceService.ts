@@ -11,10 +11,17 @@ export interface CreateInvoiceInput {
   merchantId: string;
   clientName: string;
   clientContact?: string;
+  clientEmail?: string;
+  clientTelegram?: string;
+  deliverEmail?: boolean;
+  deliverTelegram?: boolean;
   amount: string; // decimal string, e.g. "150.00"
   tokenSymbol: string; // must exist + be verified in CELO_TOKENS
   description?: string;
   dueDate?: string; // ISO date
+  recurrence?: 'NONE' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+  recurrenceEndsAt?: string; // ISO date
+  parentInvoiceId?: string; // set internally when a recurrence cycle spawns a new invoice
   // Bot/agent-created invoices are immediately shareable — there's no
   // separate "send" step in this product, sharing IS sending. Web
   // dashboard creation (Claude 2) can pass 'DRAFT' explicitly if it
@@ -30,11 +37,18 @@ export async function createInvoice(input: CreateInvoiceInput) {
     where: { id: input.merchantId },
   });
 
+  const recurrence = input.recurrence ?? 'NONE';
+  const nextRunAt = recurrence === 'NONE' ? null : computeNextRun(recurrence, new Date());
+
   const invoice = await prisma.invoice.create({
     data: {
       merchantId: input.merchantId,
       clientName: input.clientName,
       clientContact: input.clientContact,
+      clientEmail: input.clientEmail ?? null,
+      clientTelegram: input.clientTelegram ?? null,
+      deliverEmail: input.deliverEmail ?? false,
+      deliverTelegram: input.deliverTelegram ?? false,
       amount: input.amount,
       tokenSymbol: token.symbol,
       tokenAddress: token.address,
@@ -43,11 +57,30 @@ export async function createInvoice(input: CreateInvoiceInput) {
       description: input.description,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
       status: input.initialStatus ?? 'SENT',
+      recurrence,
+      recurrenceEndsAt: input.recurrenceEndsAt ? new Date(input.recurrenceEndsAt) : null,
+      nextRunAt,
+      parentInvoiceId: input.parentInvoiceId ?? null,
       attributionTag: HACKATHON_ATTRIBUTION_TAG,
     },
   });
 
   return invoice;
+}
+
+// Next scheduled run for a recurring invoice. Weekly/biweekly add days;
+// monthly advances the calendar month so it tracks the date, not 30 days.
+export function computeNextRun(
+  recurrence: 'NONE' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY',
+  from: Date,
+): Date | null {
+  const next = new Date(from);
+  switch (recurrence) {
+    case 'WEEKLY': next.setDate(next.getDate() + 7); return next;
+    case 'BIWEEKLY': next.setDate(next.getDate() + 14); return next;
+    case 'MONTHLY': next.setMonth(next.getMonth() + 1); return next;
+    default: return null;
+  }
 }
 
 // Shared shape so the checkout page always has enough to answer
@@ -291,6 +324,34 @@ export async function cancelInvoice(id: string) {
   });
 }
 
+// Records the client's accept/decline decision on the public checkout.
+// Anti-scam step: the payer agrees before paying, and the choice is stored
+// with a timestamp. A finished invoice (paid/cancelled/expired) can't change.
+export async function setClientDecision(
+  publicSlug: string,
+  decision: 'ACCEPTED' | 'DECLINED',
+) {
+  const invoice = await prisma.invoice.findUniqueOrThrow({ where: { publicSlug } });
+  if (['PAID', 'OVERPAID', 'CANCELLED', 'EXPIRED'].includes(invoice.status)) {
+    throw new Error(`This invoice is ${invoice.status.toLowerCase()} and cannot be changed.`);
+  }
+  const updated = await prisma.invoice.update({
+    where: { publicSlug },
+    data: { clientDecision: decision, clientDecisionAt: new Date() },
+  });
+  return { clientDecision: updated.clientDecision, status: updated.status };
+}
+
+// Record the Telegram chat the client opened the invoice from, so the bot can
+// later push an unpaid reminder. Set once (first opener wins) and never for a
+// finished invoice, so a stranger with the slug cannot redirect reminders.
+export async function setClientTelegramChatId(publicSlug: string, chatId: string) {
+  const invoice = await prisma.invoice.findUniqueOrThrow({ where: { publicSlug } });
+  if (invoice.clientTelegramChatId) return { ok: true, alreadySet: true };
+  if (['PAID', 'OVERPAID', 'CANCELLED', 'EXPIRED'].includes(invoice.status)) return { ok: true, alreadySet: false };
+  await prisma.invoice.update({ where: { publicSlug }, data: { clientTelegramChatId: chatId } });
+  return { ok: true, alreadySet: false };
+}
 
 export async function createPaymentIntent(invoiceId: string, payerAddress: string) {
   const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });

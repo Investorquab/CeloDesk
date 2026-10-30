@@ -30,6 +30,19 @@ enum PaymentStatus {
   REJECTED
 }
 
+enum ClientDecision {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum Recurrence {
+  NONE
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
 model User {
   id            String    @id @default(cuid())
   telegramId    String?   @unique
@@ -71,6 +84,25 @@ model Invoice {
 
   clientName      String
   clientContact   String?
+  clientEmail     String?
+  clientTelegram  String?
+  // Captured when the client opens the invoice from a Telegram deep link, so
+  // the bot can later push them an unpaid reminder (bots cannot cold-DM).
+  clientTelegramChatId String?
+
+  // Which delivery channels the merchant chose at creation time.
+  deliverEmail    Boolean       @default(false)
+  deliverTelegram Boolean       @default(false)
+
+  // Unpaid-reminder throttle: cap total nudges and space them out across
+  // email + Telegram (a single throttle so a client is never double-nagged).
+  lastReminderAt  DateTime?
+  reminderCount   Int           @default(0)
+
+  // Client consent step: the payer accepts or declines before paying.
+  // Tracked for every invoice; the checkout UI gates the Pay action on it.
+  clientDecision    ClientDecision @default(PENDING)
+  clientDecisionAt  DateTime?
 
   amount          Decimal       @db.Decimal(18, 6)
   tokenSymbol     String        // e.g. "USDm", "USDC" — see src/celo/tokens.ts
@@ -83,6 +115,16 @@ model Invoice {
   dueDate         DateTime?
 
   status          InvoiceStatus @default(DRAFT)
+
+  // Recurring invoices: the client accepts once, then a fresh invoice is
+  // generated each cycle. No silent auto-charge; each cycle is paid by the
+  // client like any other invoice.
+  recurrence       Recurrence    @default(NONE)
+  recurrenceEndsAt DateTime?
+  nextRunAt        DateTime?
+  parentInvoiceId  String?
+  parentInvoice    Invoice?      @relation("InvoiceRecurrence", fields: [parentInvoiceId], references: [id])
+  childInvoices    Invoice[]     @relation("InvoiceRecurrence")
 
   attributionTag  String        @default("celo_3fce81a170fc") // Agents on Open Rails tag; app always sets this explicitly in createInvoice
 

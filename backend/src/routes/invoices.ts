@@ -11,8 +11,11 @@ import {
   cancelInvoice,
   createPaymentIntent,
   refreshInvoicePaymentStatus,
+  setClientDecision,
+  setClientTelegramChatId,
 } from '../services/invoiceService';
 import { verifyPayment, findVerifiedTokenTransfer } from '../services/paymentVerifier';
+import { sendInvoiceEmail } from '../services/email';
 import { CELO_TOKENS, getToken } from '../celo/tokens';
 import { appendAttribution } from '../services/attribution';
 import { PrismaClient } from '@prisma/client';
@@ -30,10 +33,16 @@ const createInvoiceSchema = z.object({
   merchantId: z.string(),
   clientName: z.string().min(1),
   clientContact: z.string().optional(),
+  clientEmail: z.string().email().optional(),
+  clientTelegram: z.string().optional(),
+  deliverEmail: z.boolean().optional(),
+  deliverTelegram: z.boolean().optional(),
   amount: z.string().regex(/^\d+(\.\d{1,6})?$/),
   tokenSymbol: z.string(),
   description: z.string().optional(),
   dueDate: z.string().datetime().optional(),
+  recurrence: z.enum(['NONE', 'WEEKLY', 'BIWEEKLY', 'MONTHLY']).optional(),
+  recurrenceEndsAt: z.string().datetime().optional(),
 });
 
 // POST /api/invoices — create a draft invoice
@@ -47,10 +56,47 @@ router.post('/', requireAuth, async (req: AuthedRequest, res) => {
   }
   try {
     const invoice = await createInvoice({ ...parsed.data, merchantId: req.merchantId! });
+    const publicUrl = `${process.env.FRONTEND_URL}/invoice/${invoice.publicSlug}`;
+
+    // Deliver by email when the merchant asked for it. Email delivery must
+    // never fail invoice creation; report its outcome in the response.
+    const emailDelivery: { attempted: boolean; ok?: boolean; error?: string } = { attempted: false };
+    if (invoice.deliverEmail && invoice.clientEmail) {
+      emailDelivery.attempted = true;
+      try {
+        const merchant = await prisma.user.findUnique({
+          where: { id: req.merchantId! },
+          include: { profile: true },
+        });
+        const merchantName =
+          merchant?.profile?.businessName ||
+          (merchant ? `${merchant.walletAddress.slice(0, 6)}...${merchant.walletAddress.slice(-4)}` : 'A CeloDesk merchant');
+        const result = await sendInvoiceEmail({
+          merchantName,
+          clientName: invoice.clientName,
+          clientEmail: invoice.clientEmail,
+          amount: invoice.amount.toString(),
+          tokenSymbol: invoice.tokenSymbol,
+          description: invoice.description,
+          dueDate: invoice.dueDate,
+          payUrl: publicUrl,
+          recurring: invoice.recurrence !== 'NONE',
+        });
+        emailDelivery.ok = result.ok;
+        if (!result.ok) emailDelivery.error = result.error;
+        if (!result.ok && !result.skipped) console.warn('[email] invoice delivery failed:', result.error);
+      } catch (e: any) {
+        emailDelivery.ok = false;
+        emailDelivery.error = e?.message || 'Email delivery error.';
+        console.warn('[email] invoice delivery error:', e);
+      }
+    }
+
     res.status(201).json({
       id: invoice.id,
-      publicUrl: `${process.env.FRONTEND_URL}/invoice/${invoice.publicSlug}`,
+      publicUrl,
       status: invoice.status,
+      delivery: { email: emailDelivery },
     });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -84,6 +130,36 @@ router.get('/by-slug/:slug', async (req, res) => {
     res.json(toPublicInvoiceView(invoice));
   } catch {
     res.status(404).json({ error: 'Invoice not found' });
+  }
+});
+
+// POST /api/invoices/by-slug/:slug/decision — public. The client accepts or
+// declines the invoice before paying (anti-scam consent step).
+const decisionSchema = z.object({ decision: z.enum(['ACCEPTED', 'DECLINED']) });
+router.post('/by-slug/:slug/decision', async (req, res) => {
+  const parsed = decisionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'A decision of ACCEPTED or DECLINED is required.' });
+  }
+  try {
+    const result = await setClientDecision(req.params.slug, parsed.data.decision);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err?.message || 'Could not record your decision.' });
+  }
+});
+
+// POST /api/invoices/by-slug/:slug/telegram-chat — public. The bot records the
+// chat a client opened the invoice from, so unpaid reminders can reach them.
+const tgChatSchema = z.object({ chatId: z.union([z.string(), z.number()]) });
+router.post('/by-slug/:slug/telegram-chat', async (req, res) => {
+  const parsed = tgChatSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'A chatId is required.' });
+  try {
+    const result = await setClientTelegramChatId(req.params.slug, String(parsed.data.chatId));
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err?.message || 'Could not record the chat.' });
   }
 });
 
