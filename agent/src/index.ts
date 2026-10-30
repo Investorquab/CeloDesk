@@ -4,12 +4,15 @@ dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 
 import { Markup, Telegraf } from 'telegraf';
 import { Input } from 'telegraf';
-import { linkTelegramWallet, getMerchantByTelegramId } from './backendClient';
+import { linkTelegramWallet, getMerchantByTelegramId, getInvoiceBySlug, setInvoiceDecision, setClientTelegramChat, getDueTelegramReminders, markTelegramReminderSent, type TelegramReminder } from './backendClient';
 import { handleMessage } from './agent';
 import { renderTelegramInvoiceCard } from './invoiceCard';
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 if (!botToken) throw new Error('Missing TELEGRAM_BOT_TOKEN in .env');
+
+// Where the public pay page lives, for the client "Pay in wallet" button.
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://celo-desk.vercel.app').replace(/\/$/, '');
 
 const bot = new Telegraf(botToken);
 
@@ -281,6 +284,93 @@ async function askAgent(ctx: any, text: string) {
   }
 }
 
+// ---- Client-side invoice flow (Telegram delivery) ----
+// A client taps a deep link https://t.me/<bot>?start=inv_<publicSlug>. The bot
+// cannot cold-DM a username, so this is how an invoice reaches a client on
+// Telegram: they open the link, see the invoice, accept or decline, then pay.
+function merchantName(invoice: any): string {
+  return invoice?.merchantDisplay?.name || invoice?.merchant?.profile?.businessName || 'A CeloDesk merchant';
+}
+
+function clientInvoiceView(invoice: any, slug: string): { text: string; keyboard: any } {
+  const amount = telegramHtml(String(invoice?.amount ?? '0'));
+  const token = telegramHtml(String(invoice?.tokenSymbol ?? ''));
+  const name = telegramHtml(merchantName(invoice));
+  const status = String(invoice?.status || '');
+  const decision = String(invoice?.clientDecision || 'PENDING');
+  const payUrl = `${FRONTEND_URL}/invoice/${encodeURIComponent(slug)}`;
+
+  const head = [
+    `🧾 <b>${name}</b> sent you an invoice`,
+    '',
+    `💰 <b>${amount} ${token}</b>`,
+  ];
+  if (invoice?.description) head.push(`📝 ${telegramHtml(String(invoice.description))}`);
+  if (invoice?.dueDate) head.push(`⏰ Due ${telegramHtml(formatInvoiceDate(invoice.dueDate))}`);
+
+  if (status === 'PAID' || status === 'OVERPAID') {
+    return { text: [...head, '', '✅ <b>This invoice is already paid.</b> Thank you!'].join('\n'),
+      keyboard: Markup.inlineKeyboard([[Markup.button.url('🔗 View receipt', payUrl)]]) };
+  }
+  if (status === 'CANCELLED' || status === 'EXPIRED') {
+    return { text: [...head, '', '🚫 <b>This invoice is no longer available.</b>'].join('\n'),
+      keyboard: Markup.inlineKeyboard([]) };
+  }
+
+  if (decision === 'ACCEPTED') {
+    return {
+      text: [...head, '', '✅ <b>You accepted this invoice.</b>', 'Pay from any Celo wallet or MiniPay. You will not be charged anything extra.'].join('\n'),
+      keyboard: Markup.inlineKeyboard([
+        [Markup.button.url(`💳 Pay ${amount} ${token}`, payUrl)],
+        [Markup.button.callback('✖ Decline instead', `inv_dec_${slug}`)],
+      ]),
+    };
+  }
+  if (decision === 'DECLINED') {
+    return {
+      text: [...head, '', '✖ <b>You declined this invoice.</b>', 'Changed your mind? You can accept it below.'].join('\n'),
+      keyboard: Markup.inlineKeyboard([[Markup.button.callback('↩ Accept instead', `inv_acc_${slug}`)]]),
+    };
+  }
+  // PENDING: accept-before-pay consent step.
+  return {
+    text: [...head, '', '🔒 <b>You decide before you pay.</b>', 'Accept to continue, or decline if this is not right. CeloDesk never charges you without your tap.'].join('\n'),
+    keyboard: Markup.inlineKeyboard([
+      [Markup.button.callback('✅ Accept', `inv_acc_${slug}`), Markup.button.callback('✖ Decline', `inv_dec_${slug}`)],
+    ]),
+  };
+}
+
+async function showClientInvoice(ctx: any, slug: string) {
+  try {
+    const invoice = await getInvoiceBySlug(slug);
+    // Remember this chat so we can push an unpaid reminder later (best effort).
+    const chatId = ctx.chat?.id ?? ctx.from?.id;
+    if (chatId) setClientTelegramChat(slug, chatId).catch(() => {});
+    const view = clientInvoiceView(invoice, slug);
+    await ctx.reply(view.text, { parse_mode: 'HTML', ...view.keyboard });
+  } catch (err) {
+    console.error('Telegram client invoice open failed:', err);
+    await ctx.reply('⚠️ <b>We could not open this invoice.</b>\n\nThe link may be invalid or expired. Please ask the sender for a new one.', { parse_mode: 'HTML' });
+  }
+}
+
+async function handleClientDecision(ctx: any, slug: string, decision: 'ACCEPTED' | 'DECLINED') {
+  try {
+    await setInvoiceDecision(slug, decision);
+    const invoice = await getInvoiceBySlug(slug);
+    const view = clientInvoiceView(invoice, slug);
+    await ctx.answerCbQuery(decision === 'ACCEPTED' ? 'Invoice accepted' : 'Invoice declined');
+    await ctx.editMessageText(view.text, { parse_mode: 'HTML', ...view.keyboard });
+  } catch (err) {
+    console.error('Telegram client decision failed:', err);
+    await ctx.answerCbQuery('Could not record that. Please try again.', { show_alert: true });
+  }
+}
+
+bot.action(/^inv_acc_(.+)$/, (ctx) => handleClientDecision(ctx, ctx.match[1], 'ACCEPTED'));
+bot.action(/^inv_dec_(.+)$/, (ctx) => handleClientDecision(ctx, ctx.match[1], 'DECLINED'));
+
 bot.telegram.setMyCommands([
   { command: 'start', description: 'Connect or reconnect your Celo wallet' },
   { command: 'invoice', description: 'Create an invoice' },
@@ -291,6 +381,14 @@ bot.telegram.setMyCommands([
 ]).catch(() => {});
 
 bot.start(async (ctx) => {
+  // Deep link from an invoice delivery: open the client invoice flow and stop
+  // (the client is not a merchant, so no wallet-link onboarding).
+  const payload = (ctx as any).startPayload as string | undefined;
+  if (payload && payload.startsWith('inv_')) {
+    await showClientInvoice(ctx, payload.slice(4));
+    return;
+  }
+
   const telegramId = String(ctx.from.id);
   const existing = sessions.get(telegramId);
   if (existing) {
@@ -346,7 +444,61 @@ bot.on('text', async (ctx) => {
   await askAgent(ctx, text);
 });
 
+// ---- Unpaid-invoice Telegram reminders ----
+// The backend decides who is due (shared throttle with email); the bot delivers.
+function reminderMessage(r: TelegramReminder): { text: string; keyboard: any } {
+  const amount = telegramHtml(r.amount);
+  const token = telegramHtml(r.tokenSymbol);
+  const lines = [
+    '⏰ <b>Payment reminder</b>',
+    '',
+    `🧾 <b>${telegramHtml(r.merchantName)}</b> is still awaiting payment`,
+    `💰 <b>${amount} ${token}</b>`,
+  ];
+  if (r.description) lines.push(`📝 ${telegramHtml(r.description)}`);
+  lines.push('', 'Tap below to review and pay. You will not be charged without your tap.');
+  return {
+    text: lines.join('\n'),
+    keyboard: Markup.inlineKeyboard([[Markup.button.url(`💳 Pay ${amount} ${token}`, r.payUrl)]]),
+  };
+}
+
+let remindersRunning = false;
+function startReminderScheduler() {
+  if (!process.env.INTERNAL_API_KEY) {
+    console.log('[reminders] Telegram reminder scheduler disabled (no INTERNAL_API_KEY)');
+    return;
+  }
+  const intervalMs = process.env.REMINDER_POLL_MS ? Number(process.env.REMINDER_POLL_MS) : 10 * 60 * 1000;
+  const tick = async () => {
+    if (remindersRunning) return;
+    remindersRunning = true;
+    try {
+      const due = await getDueTelegramReminders();
+      for (const r of due) {
+        try {
+          const msg = reminderMessage(r);
+          await bot.telegram.sendMessage(r.chatId, msg.text, { parse_mode: 'HTML', ...msg.keyboard });
+          await markTelegramReminderSent(r.id);
+        } catch (err) {
+          // A blocked bot / closed chat should not stop the rest of the batch.
+          console.error('[reminders] send failed for invoice', r.id, err);
+        }
+      }
+      if (due.length) console.log(`[reminders] Telegram reminders processed: ${due.length}`);
+    } catch (err) {
+      console.error('[reminders] poll error:', err);
+    } finally {
+      remindersRunning = false;
+    }
+  };
+  setTimeout(tick, 20_000);
+  setInterval(tick, intervalMs);
+  console.log(`[reminders] Telegram reminder scheduler started (every ${Math.round(intervalMs / 1000)}s)`);
+}
+
 bot.launch();
 console.log('CeloDesk Telegram agent is running');
+startReminderScheduler();
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));

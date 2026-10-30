@@ -76,6 +76,54 @@ export function getInvoice(token: string, id: string) {
   return request<any>(`/api/invoices/${id}`, token);
 }
 
+// Public — the client opens an invoice from a Telegram deep link, so there
+// is no merchant session. Resolves by publicSlug like the web checkout.
+export function getInvoiceBySlug(slug: string) {
+  return request<any>(`/api/invoices/by-slug/${encodeURIComponent(slug)}`);
+}
+
+// Public — the client accepts or declines before paying (anti-scam consent).
+export function setInvoiceDecision(slug: string, decision: 'ACCEPTED' | 'DECLINED') {
+  return request<{ clientDecision: string; status: string }>(
+    `/api/invoices/by-slug/${encodeURIComponent(slug)}/decision`,
+    undefined,
+    { method: 'POST', body: JSON.stringify({ decision }) }
+  );
+}
+
+// Public — record the chat the client opened the invoice from, so we can push
+// an unpaid reminder later. Fire-and-forget: failure must not break the open.
+export function setClientTelegramChat(slug: string, chatId: number | string) {
+  return request<{ ok: boolean }>(
+    `/api/invoices/by-slug/${encodeURIComponent(slug)}/telegram-chat`,
+    undefined,
+    { method: 'POST', body: JSON.stringify({ chatId }) }
+  );
+}
+
+// ---- Internal (service-to-service), guarded by INTERNAL_API_KEY ----
+export interface TelegramReminder {
+  id: string; publicSlug: string; chatId: string; merchantName: string;
+  clientName: string; amount: string; tokenSymbol: string; description: string | null; payUrl: string;
+}
+async function internalRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const key = process.env.INTERNAL_API_KEY;
+  if (!key) throw new Error('INTERNAL_API_KEY not set');
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'x-internal-key': key, ...options.headers },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as any)?.error ?? `Internal request to ${path} failed (${res.status})`);
+  return body as T;
+}
+export function getDueTelegramReminders() {
+  return internalRequest<TelegramReminder[]>('/api/internal/telegram-reminders');
+}
+export function markTelegramReminderSent(invoiceId: string) {
+  return internalRequest<{ ok: boolean }>(`/api/internal/telegram-reminders/${encodeURIComponent(invoiceId)}/sent`, { method: 'POST' });
+}
+
 export function listOutstandingInvoices(token: string, merchantId: string) {
   return request<any[]>(`/api/invoices?merchantId=${merchantId}&status=outstanding`, token);
 }
