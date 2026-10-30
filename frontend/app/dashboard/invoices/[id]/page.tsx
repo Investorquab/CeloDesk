@@ -1,110 +1,63 @@
 'use client';
-
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {api,Invoice,money,shortAddress} from '../../../../lib/api';
-import AppNav from '../../../../components/AppNav';
-import {ArrowLeft,Copy,Receipt} from '../../../../components/Icons';
-import {StatusBadge} from '../../../../components/StatusBadge';
+import AppHeaderV2 from '../../../../components/AppHeaderV2';
+import {invoiceDisplay} from '../../../../components/StatusBadge';
+import {Copy,Receipt,Check} from '../../../../components/Icons';
 import {userFacingError} from '../../../../lib/userFacingError';
+import s from '../../../../components/AppShell.module.css';
+
+const TAG:Record<string,string>={paid:s.tagPaid,pending:s.tagPending,overdue:s.tagOverdue,sent:s.tagSent,draft:s.tagDraft};
 
 export default function Page({params,searchParams}:{params:{id:string};searchParams:{merchantId?:string}}){
  const merchantId=searchParams.merchantId||'';
  const [invoice,setInvoice]=useState<Invoice|null>(null);
+ const [name,setName]=useState<string>();
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
+ useEffect(()=>{api.getInvoice(params.id).then(setInvoice).catch(e=>setError(userFacingError(e,'Could not load this invoice.')));if(merchantId)api.getMerchant(merchantId).then(m=>setName(m?.profile?.businessName)).catch(()=>{})},[params.id,merchantId]);
+ async function copyLink(){if(!invoice)return;const url=`${window.location.origin}/invoice/${invoice.publicSlug}`;try{await navigator.clipboard?.writeText(url);setNotice('Payment link copied');setTimeout(()=>setNotice(''),1800)}catch{setError('Could not copy the payment link.')}}
+ const d=invoice?invoiceDisplay(invoice):null;
 
- useEffect(()=>{
-   api.getInvoice(params.id)
-     .then(setInvoice)
-     .catch(e=>setError(userFacingError(e,'Could not load this invoice.')));
- },[params.id]);
-
- async function copyLink(){
-   if(!invoice)return;
-   const url=`${window.location.origin}/invoice/${invoice.publicSlug}`;
-   try{
-     await navigator.clipboard?.writeText(url);
-     setNotice('Payment link copied');
-     setTimeout(()=>setNotice(''),1800);
-   }catch{
-     setError('Could not copy the payment link. Please try again shortly.');
-   }
- }
-
- if(error)return <div className="appShell"><div className="topbar"><div className="topbarInner"><Link href={`/dashboard/invoices?merchantId=${merchantId}`} className="btn btnGhost"><ArrowLeft size={16}/>Back</Link></div></div><main className="main container"><div className="formError"><strong>{error}</strong><div className="checkoutErrorActions"><button className="btn btnBrand" onClick={()=>window.location.reload()}>Try again</button><Link className="btn btnSoft" href={`/dashboard/invoices?merchantId=${merchantId}`}>Cancel</Link></div></div></main></div>;
-
- return <div className="appShell">
-   <div className="topbar">
-     <div className="topbarInner">
-       <Link href={`/dashboard/invoices?merchantId=${merchantId}`} className="brand"><span className="brandMark"/>CeloDesk</Link>
-       <Link href={`/dashboard/invoices?merchantId=${merchantId}`} className="btn btnGhost"><ArrowLeft size={16}/>Back</Link>
-     </div>
+ return <div className={s.app}>
+  <AppHeaderV2 merchantId={merchantId} businessName={name}/>
+  <div className={s.wrap}>
+   {notice&&<div className={s.toast} style={{marginTop:18}}><Check size={15}/>{notice}</div>}
+   {error&&<div className={s.err} style={{marginTop:18}}>{error}</div>}
+   <div className={s.ph}>
+    <div><div className={s.kick}>Invoice details</div><h1>{invoice?.clientName||'Invoice'}</h1></div>
+    <div style={{display:'flex',gap:10}}>
+     <Link href={`/dashboard/invoices?merchantId=${merchantId}`} className={`${s.btn} ${s.btnLine}`}>Back to invoices</Link>
+     {invoice&&<button className={`${s.btn} ${s.btnDark}`} onClick={copyLink}><Copy size={15}/>Copy link</button>}
+    </div>
    </div>
-   <div className="appPage">
-     <div className="container appGrid">
-       <AppNav merchantId={merchantId}/>
-       <main className="main invoiceDetailPage">
-         {notice&&<div className="successToast">{notice}</div>}
-         <div className="pageTitleRow invoiceDetailHeader">
-           <div>
-             <div className="muted invoiceEyebrow">INVOICE DETAILS</div>
-             <h1>{invoice?.clientName||'Invoice'}</h1>
-             <p className="muted">Manage this payment request and track its payments.</p>
-           </div>
-           {invoice&&<button className="btn btnBrand" onClick={copyLink}><Copy size={15}/>Copy payment link</button>}
-         </div>
 
-         {invoice?
-           <section className="panel invoiceDetailCard">
-             <div className="invoiceDetailSummary">
-               <div>
-                 <span className="muted invoiceMetaLabel">Amount due</span>
-                 <div className="invoiceDetailAmount">{money(invoice.amount,invoice.tokenSymbol)}</div>
-               </div>
-               <div className="invoiceDetailStatus">
-                 <span className="muted invoiceMetaLabel">Status</span>
-                 <StatusBadge status={invoice.status}/>
-               </div>
-             </div>
-
-             <div className="invoiceDetailMeta">
-               <div><span className="muted invoiceMetaLabel">Client</span><strong>{invoice.clientName}</strong></div>
-               <div><span className="muted invoiceMetaLabel">Created</span><strong>{new Date(invoice.createdAt).toLocaleString()}</strong></div>
-               <div><span className="muted invoiceMetaLabel">Due date</span><strong>{invoice.dueDate?new Date(invoice.dueDate).toLocaleDateString():'No due date'}</strong></div>
-               <div><span className="muted invoiceMetaLabel">Receiving wallet</span><strong>{shortAddress(invoice.receivingWallet)}</strong></div>
-               <div><span className="muted invoiceMetaLabel">Network</span><strong>Celo Mainnet</strong></div>
-               <div><span className="muted invoiceMetaLabel">Payment token</span><strong>{invoice.tokenSymbol}</strong></div>
-             </div>
-
-             <div className="invoiceDetailDescription">
-               <span className="muted invoiceMetaLabel">Description</span>
-               <p>{invoice.description||'Payment request'}</p>
-             </div>
-
-             <div className="invoicePayments">
-               <div className="invoicePaymentsHeader">
-                 <div><h2>Payment history</h2><span className="muted">{invoice.payments?.length||0} recorded payments</span></div>
-               </div>
-               {invoice.payments?.length?
-                 <div className="invoicePaymentList">
-                   {invoice.payments.map(p=><div key={p.id} className="invoicePaymentItem">
-                     <span className="paymentHistoryIcon"><Receipt size={15}/></span>
-                     <div className="invoicePaymentMain">
-                       <strong>{money(p.amount,p.tokenSymbol||invoice.tokenSymbol)}</strong>
-                       <span className="muted">{shortAddress(p.txHash)}</span>
-                     </div>
-                     <span className="paymentHistoryStatus">{p.status}</span>
-                   </div>)}
-                 </div>
-                 :<div className="invoiceEmptyPayments"><Receipt size={18}/><span>No payments recorded yet.</span></div>
-               }
-             </div>
-           </section>
-           :<section className="panel invoiceDetailCard"><div className="invoiceLoading">Loading invoice...</div></section>
-         }
-       </main>
-     </div>
-   </div>
- </div>
+   {invoice?<div className={s.panel}>
+    <div className={s.detailHead}>
+     <div><div className={s.metaLabel}>Amount due</div><div className={`${s.detailAmt} ${s.num}`}>{money(invoice.amount,invoice.tokenSymbol)}</div></div>
+     {d&&<span className={`${s.tag} ${TAG[d.cls]||s.tagSent}`}>{d.label}</span>}
+    </div>
+    <div className={s.metaGrid}>
+     <div className={s.metaItem}><span className={s.metaLabel}>Client</span><strong>{invoice.clientName}</strong></div>
+     <div className={s.metaItem}><span className={s.metaLabel}>Created</span><strong>{new Date(invoice.createdAt).toLocaleString()}</strong></div>
+     <div className={s.metaItem}><span className={s.metaLabel}>Due date</span><strong>{invoice.dueDate?new Date(invoice.dueDate).toLocaleDateString():'No due date'}</strong></div>
+     <div className={s.metaItem}><span className={s.metaLabel}>Receiving wallet</span><strong className={s.mono}>{shortAddress(invoice.receivingWallet)}</strong></div>
+     <div className={s.metaItem}><span className={s.metaLabel}>Network</span><strong>Celo Mainnet</strong></div>
+     <div className={s.metaItem}><span className={s.metaLabel}>Payment token</span><strong>{invoice.tokenSymbol}</strong></div>
+     {invoice.clientDecision&&invoice.clientDecision!=='PENDING'&&<div className={s.metaItem}><span className={s.metaLabel}>Client decision</span><strong>{invoice.clientDecision==='ACCEPTED'?'Accepted':'Declined'}{invoice.clientDecisionAt?` · ${new Date(invoice.clientDecisionAt).toLocaleDateString()}`:''}</strong></div>}
+     {invoice.recurrence&&invoice.recurrence!=='NONE'&&<div className={s.metaItem}><span className={s.metaLabel}>Repeats</span><strong>{invoice.recurrence.charAt(0)+invoice.recurrence.slice(1).toLowerCase()}{invoice.recurrenceEndsAt?` until ${new Date(invoice.recurrenceEndsAt).toLocaleDateString()}`:''}</strong></div>}
+     {(invoice.clientEmail||invoice.clientTelegram)&&<div className={s.metaItem}><span className={s.metaLabel}>Sent to</span><strong>{[invoice.deliverEmail&&invoice.clientEmail,invoice.deliverTelegram&&invoice.clientTelegram].filter(Boolean).join(' · ')||invoice.clientEmail||invoice.clientTelegram}</strong></div>}
+    </div>
+    <div className={s.descBox}><span className={s.metaLabel}>Description</span><p>{invoice.description||'Payment request'}</p></div>
+    <div className={s.payHd}><h3>Payment history</h3><span className={s.metaLabel}>{invoice.payments?.length||0} recorded payment{invoice.payments?.length===1?'':'s'}</span></div>
+    {invoice.payments?.length?invoice.payments.map(p=><div key={p.id} className={s.payItem}>
+     <span className={s.payIcon}><Receipt size={15}/></span>
+     <div className={s.payMain}><strong>{money(p.amount,p.tokenSymbol||invoice.tokenSymbol)}</strong><small>{shortAddress(p.txHash)}</small></div>
+     <span className={s.payStatus}>{p.status}</span>
+    </div>):<div className={s.payEmpty}><Receipt size={16}/>No payments recorded yet.</div>}
+   </div>:!error&&<div className={s.panel}><div className={s.payEmpty}>Loading invoice...</div></div>}
+   <div style={{height:40}}/>
+  </div>
+ </div>;
 }

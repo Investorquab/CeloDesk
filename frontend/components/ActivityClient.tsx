@@ -2,9 +2,10 @@
 import {useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {api,Invoice,money,shortAddress} from '../lib/api';
-import AppNav from './AppNav';
+import AppHeaderV2 from './AppHeaderV2';
 import {userFacingError} from '../lib/userFacingError';
-import {Activity as ActivityIcon,ArrowLeft,Check,Clock,Alert,Receipt,Wallet} from './Icons';
+import {Activity as ActivityIcon,Check,Clock,Alert,Receipt} from './Icons';
+import s from './AppShell.module.css';
 
 type EventItem={id:string;kind:'created'|'paid'|'pending'|'failed';title:string;subtitle:string;amount?:string;time:string;status?:string;href?:string;};
 function buildEvents(invoices:Invoice[],returnTo:string):EventItem[]{
@@ -21,15 +22,30 @@ function buildEvents(invoices:Invoice[],returnTo:string):EventItem[]{
  }
  return out.sort((a,b)=>+new Date(b.time)-+new Date(a.time));
 }
-function EventIcon({kind}:{kind:EventItem['kind']}){if(kind==='paid')return <Check size={17}/>;if(kind==='pending')return <Clock size={17}/>;if(kind==='failed')return <Alert size={17}/>;if(kind==='created')return <Receipt size={17}/>;return <ActivityIcon size={17}/>}
+function EventIcon({kind}:{kind:EventItem['kind']}){if(kind==='paid')return <Check size={16}/>;if(kind==='pending')return <Clock size={16}/>;if(kind==='failed')return <Alert size={16}/>;if(kind==='created')return <Receipt size={16}/>;return <ActivityIcon size={16}/>;}
+
 export default function ActivityClient({merchantId}:{merchantId:string}){
- const [invoices,setInvoices]=useState<Invoice[]>([]),[loading,setLoading]=useState(true),[err,setErr]=useState(''),[filter,setFilter]=useState('All');
- useEffect(()=>{setLoading(true);api.listInvoices(merchantId).then(x=>setInvoices(x)).catch(e=>setErr(userFacingError(e,'Could not load activity.'))).finally(()=>setLoading(false))},[merchantId]);
+ const [invoices,setInvoices]=useState<Invoice[]>([]),[loading,setLoading]=useState(true),[err,setErr]=useState(''),[filter,setFilter]=useState('All'),[name,setName]=useState<string>();
+ const load=()=>{setLoading(true);api.listInvoices(merchantId).then(x=>setInvoices(x)).catch(e=>setErr(userFacingError(e,'Could not load activity.'))).finally(()=>setLoading(false))};
+ useEffect(()=>{load();api.getMerchant(merchantId).then(m=>setName(m?.profile?.businessName)).catch(()=>{})},[merchantId]);
  const events=useMemo(()=>buildEvents(invoices,`/dashboard/activity?merchantId=${merchantId}`),[invoices,merchantId]);
  const filtered=events.filter(e=>filter==='All'||(filter==='Payments'&&['paid','pending','failed'].includes(e.kind))||(filter==='Invoices'&&e.kind==='created')||(filter===e.status));
- return <div className="appShell"><div className="topbar"><div className="topbarInner"><Link href={`/dashboard?merchantId=${merchantId}`} className="brand"><span className="brandMark"/>CeloDesk</Link><Link href={`/dashboard?merchantId=${merchantId}`} className="btn btnGhost"><ArrowLeft size={16}/>Back</Link></div></div><div className="appPage"><div className="container appGrid"><AppNav merchantId={merchantId}/><main className="main">
-  <div className="pageTitleRow"><div><div className="muted" style={{fontSize:11}}>ACCOUNT ACTIVITY</div><h1>Activity</h1><p className="muted">Every invoice and payment event in one place.</p></div><div className="activityCount">{events.length} events</div></div>
-  <div className="filterBar">{['All','Payments','Invoices','Pending','Verified','Failed'].map(x=><button key={x} className={filter===x?'filterActive':''} onClick={()=>setFilter(x)}>{x}</button>)}</div>
-  <section className="panel activityPanel">{loading?<div className="activityEmpty">Loading your activity…</div>:err?<div className="activityEmpty errorText"><strong>{err}</strong><div className="activityErrorActions"><button className="btn btnBrand" onClick={()=>{setErr('');setLoading(true);api.listInvoices(merchantId).then(x=>setInvoices(x)).catch(e=>setErr(userFacingError(e,'Could not load activity.'))).finally(()=>setLoading(false))}}>Try again</button><button className="btn btnSoft" onClick={()=>setErr('')}>Cancel</button></div></div>:filtered.length?filtered.map(e=><Link className="activityRow" key={e.id} href={e.href||'#'}><span className={`activityIcon ${e.kind}`}><EventIcon kind={e.kind}/></span><span className="activityCopy"><strong>{e.title}</strong><small>{e.subtitle}</small></span><span className="activityAmount"><strong className={e.kind==='paid'?'positive':''}>{e.amount||''}</strong><small>{new Date(e.time).toLocaleString()}</small></span><span className="activityArrow">›</span></Link>):<div className="activityEmpty">No activity matches this filter.</div>}</section>
- </main></div></div></div>
+ return <div className={s.app}>
+  <AppHeaderV2 merchantId={merchantId} businessName={name}/>
+  <div className={s.wrap}>
+   <div className={s.ph}><div><div className={s.kick}>Account activity</div><h1>Activity</h1></div><div className={s.kick}>{events.length} events</div></div>
+   <div className={s.filterBar}>{['All','Payments','Invoices','Pending','Verified','Failed'].map(x=><button key={x} className={filter===x?s.filterOn:''} onClick={()=>setFilter(x)}>{x}</button>)}</div>
+   <div className={s.panel}>
+    {loading?<div className={s.payEmpty}>Loading your activity...</div>
+    :err?<div className={s.empty}><div className={s.h}>{err}</div><button className={`${s.btn} ${s.btnDark}`} style={{marginTop:14}} onClick={()=>{setErr('');load()}}>Try again</button></div>
+    :filtered.length?filtered.map(e=><Link key={e.id} className={s.actRow} href={e.href||'#'}>
+      <span className={`${s.actIcon} ${s[e.kind]}`}><EventIcon kind={e.kind}/></span>
+      <span className={s.actCopy}><strong>{e.title}</strong><small>{e.subtitle}</small></span>
+      <span className={s.actAmount}><strong className={e.kind==='paid'?s.pos:''}>{e.amount||''}</strong><small>{new Date(e.time).toLocaleString()}</small></span>
+      <span className={s.actArrow}>›</span>
+     </Link>):<div className={s.payEmpty}>No activity matches this filter.</div>}
+   </div>
+   <div style={{height:40}}/>
+  </div>
+ </div>;
 }

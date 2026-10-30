@@ -1,18 +1,72 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import {api,Invoice,money} from '../../../lib/api';
-import AppNav from '../../../components/AppNav';
-import {ArrowLeft,Receipt,Plus,Search,Trash,Check,MoreVertical,Share} from '../../../components/Icons';
-import {StatusBadge} from '../../../components/StatusBadge';
+import AppHeaderV2 from '../../../components/AppHeaderV2';
+import {invoiceDisplay} from '../../../components/StatusBadge';
+import {Plus,Search,Trash,Check,MoreVertical,Share} from '../../../components/Icons';
 import {userFacingError} from '../../../lib/userFacingError';
+import s from '../../../components/AppShell.module.css';
+
+const TAG:Record<string,string>={paid:s.tagPaid,pending:s.tagPending,overdue:s.tagOverdue,sent:s.tagSent,draft:s.tagDraft};
+function Tag({i}:{i:Invoice}){const d=invoiceDisplay(i);return <span className={`${s.tag} ${TAG[d.cls]||s.tagSent}`}>{d.label}</span>;}
+function via(i:Invoice){const p:string[]=[];if(i.deliverEmail)p.push('Email');if(i.deliverTelegram)p.push('Telegram');return p.length?p.join(' · '):'Link';}
+const STATUSES=['DRAFT','SENT','VIEWED','PENDING','PARTIALLY_PAID','PAID','OVERPAID','OVERDUE','FAILED','CANCELLED','EXPIRED'];
 
 export default function Page({searchParams}:{searchParams:{merchantId?:string}}){
  const merchantId=searchParams.merchantId||'';
+ const router=useRouter();
  const [items,setItems]=useState<Invoice[]>([]),[q,setQ]=useState(''),[status,setStatus]=useState('All');
- const [deleting,setDeleting]=useState<string|null>(null),[confirming,setConfirming]=useState<Invoice|null>(null),[menuOpen,setMenuOpen]=useState<string|null>(null),[menuDirection,setMenuDirection]=useState<'up'|'down'>('down'),[error,setError]=useState(''),[deleted,setDeleted]=useState('');
- useEffect(()=>{if(merchantId)api.listInvoices(merchantId).then(x=>setItems(x.sort((a,b)=>+new Date(b.createdAt)-+new Date(a.createdAt)))).catch(e=>setError(userFacingError(e,'Could not load invoices.')))},[merchantId]);
- const filtered=useMemo(()=>items.filter(i=>(status==='All'||i.status===status)&&(!q||`${i.clientName} ${i.description||''} ${i.tokenSymbol}`.toLowerCase().includes(q.toLowerCase()))),[items,q,status]);
- async function shareInvoice(invoice:Invoice){const url=typeof window!=='undefined'?`${window.location.origin}/invoice/${invoice.publicSlug}`:'';try{await navigator.clipboard?.writeText(url);setDeleted('Invoice link copied');setTimeout(()=>setDeleted(''),1800)}catch{setError('Could not copy the invoice link. Please try again shortly.')}setMenuOpen(null)}
- async function removeInvoice(invoice:Invoice){setDeleting(invoice.id);setError('');try{await api.deleteInvoice(invoice.id);setItems(prev=>prev.filter(x=>x.id!==invoice.id));setConfirming(null);setDeleted('Invoice deleted');setTimeout(()=>setDeleted(''),2200)}catch(e:any){setError(userFacingError(e,'Could not delete this invoice.'));setConfirming(null)}finally{setDeleting(null)}}
- return <div className="appShell"><div className="topbar"><div className="topbarInner"><Link href={`/dashboard?merchantId=${merchantId}`} className="brand"><span className="brandMark"/>CeloDesk</Link><Link href={`/dashboard?merchantId=${merchantId}`} className="btn btnGhost"><ArrowLeft size={16}/>Back</Link></div></div><div className="appPage"><div className="container appGrid"><AppNav merchantId={merchantId}/><main className="main">{error&&<div className="formError" style={{marginBottom:14}}>{error}</div>}{deleted&&<div className="successToast"><Check size={15}/>{deleted}</div>}<div className="pageTitleRow"><div><div className="muted" style={{fontSize:11}}>PAYMENT REQUESTS</div><h1>Invoices</h1><p className="muted">Create, share and track every payment request.</p></div><Link href={`/dashboard/create?merchantId=${merchantId}`} className="btn btnBrand"><Plus size={16}/>Create invoice</Link></div><div className="invoiceToolbar"><label className="searchBox"><Search size={16}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search clients or invoices…"/></label><select value={status} onChange={e=>setStatus(e.target.value)}><option>All</option>{['DRAFT','SENT','VIEWED','PENDING','PARTIALLY_PAID','PAID','OVERPAID','OVERDUE','FAILED','CANCELLED','EXPIRED'].map(x=><option key={x}>{x}</option>)}</select></div><section className="panel">{filtered.length?filtered.map(i=><div className="invoiceRow invoiceRowFull invoiceRowWithAction" key={i.id}><Link className="invoiceRowMain" href={`/dashboard/invoices/${encodeURIComponent(i.id)}?merchantId=${encodeURIComponent(merchantId)}`}><div className="invoiceClient"><span className="clientDot"><Receipt size={14}/></span><span className="clientName">{i.clientName}</span></div><div className="invoiceDescription muted">{i.description||'Payment request'}</div><strong className="invoiceAmount">{money(i.amount,i.tokenSymbol)}</strong><span className="invoiceStatus"><StatusBadge status={i.status}/></span><span className="invoiceDate muted">{new Date(i.createdAt).toLocaleDateString()}</span></Link><div className="invoiceActionWrap"><button className={`invoiceAction ${menuOpen===i.id?'open':''}`} type="button" aria-label={`Invoice actions for ${i.clientName}`} aria-expanded={menuOpen===i.id} onClick={e=>{e.preventDefault();e.stopPropagation();if(menuOpen===i.id){setMenuOpen(null);return}const r=e.currentTarget.getBoundingClientRect();setMenuDirection(window.innerHeight-r.bottom<180?'up':'down');setMenuOpen(i.id)}}><MoreVertical size={17}/></button>{menuOpen===i.id&&<div className={`invoiceActionMenu ${menuDirection==='up'?'openUp':''}`} role="menu"><Link href={`/dashboard/invoices/${encodeURIComponent(i.id)}?merchantId=${encodeURIComponent(merchantId)}`} className="invoiceMenuItem" onClick={()=>setMenuOpen(null)}>View details</Link><button className="invoiceMenuItem" type="button" onClick={()=>shareInvoice(i)}><Share size={14}/>Copy payment link</button><button className="invoiceMenuItem danger" type="button" disabled={i.status==='PAID'} title={i.status==='PAID'?'Paid invoices are kept for payment history.':'Delete invoice'} onClick={()=>{setMenuOpen(null);setConfirming(i)}}><Trash size={14}/>{i.status==='PAID'?'Paid - kept':'Delete invoice'}</button></div>}</div></div>):<div style={{padding:40,textAlign:'center'}}><div style={{fontFamily:'Manrope',fontWeight:800}}>No invoices found</div><p className="muted" style={{fontSize:12}}>Try another search or create a new invoice.</p></div>}</section></main></div></div>{confirming&&<div className="modalBackdrop" role="dialog" aria-modal="true"><div className="confirmModal"><div className="confirmIcon"><Trash size={18}/></div><h2>Delete this invoice?</h2><p className="muted">This will permanently remove the invoice from your account if the backend allows deletion. This action cannot be undone.</p><div className="confirmActions"><button className="btn btnSoft" onClick={()=>setConfirming(null)}>Keep invoice</button><button className="btn btnDanger" disabled={!!deleting} onClick={()=>removeInvoice(confirming)}>{deleting?'Deleting…':'Delete invoice'}</button></div></div></div>}</div>}
+ const [name,setName]=useState<string>();
+ const [deleting,setDeleting]=useState<string|null>(null),[confirming,setConfirming]=useState<Invoice|null>(null),[menuOpen,setMenuOpen]=useState<string|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ useEffect(()=>{if(!merchantId)return;api.listInvoices(merchantId).then(x=>setItems(x.sort((a,b)=>+new Date(b.createdAt)-+new Date(a.createdAt)))).catch(e=>setError(userFacingError(e,'Could not load invoices.')));api.getMerchant(merchantId).then(m=>setName(m?.profile?.businessName)).catch(()=>{})},[merchantId]);
+ const matchStatus=(i:Invoice)=>status==='All'?true:status==='ACCEPTED'?i.clientDecision==='ACCEPTED':status==='DECLINED'?i.clientDecision==='DECLINED':status==='AWAITING'?i.clientDecision==='PENDING'&&['SENT','VIEWED','PENDING'].includes(i.status):i.status===status;
+ const filtered=useMemo(()=>items.filter(i=>matchStatus(i)&&(!q||`${i.clientName} ${i.description||''} ${i.tokenSymbol}`.toLowerCase().includes(q.toLowerCase()))),[items,q,status]);
+ async function shareInvoice(i:Invoice){const url=typeof window!=='undefined'?`${window.location.origin}/invoice/${i.publicSlug}`:'';try{await navigator.clipboard?.writeText(url);setNotice('Invoice link copied');setTimeout(()=>setNotice(''),1800)}catch{setError('Could not copy the invoice link.')}setMenuOpen(null)}
+ async function removeInvoice(i:Invoice){setDeleting(i.id);setError('');try{await api.deleteInvoice(i.id);setItems(prev=>prev.filter(x=>x.id!==i.id));setConfirming(null);setNotice('Invoice deleted');setTimeout(()=>setNotice(''),2000)}catch(e:any){setError(userFacingError(e,'Could not delete this invoice.'));setConfirming(null)}finally{setDeleting(null)}}
+
+ return <div className={s.app}>
+  <AppHeaderV2 merchantId={merchantId} businessName={name}/>
+  <div className={s.wrap}>
+   {error&&<div className={s.err} style={{marginTop:18}}>{error}</div>}
+   {notice&&<div className={s.toast} style={{marginTop:18}}><Check size={15}/>{notice}</div>}
+   <div className={s.ph}>
+    <div><div className={s.kick}>Payment requests</div><h1>Invoices</h1></div>
+    <Link href={`/dashboard/create?merchantId=${merchantId}`} className={`${s.btn} ${s.btnDark}`}><Plus size={16}/>New invoice</Link>
+   </div>
+   <div className={s.panel}>
+    <div className={s.toolbar}>
+     <label className={s.search}><Search size={16}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search clients or invoices..."/></label>
+     <select className={s.selectLine} value={status} onChange={e=>setStatus(e.target.value)}>
+      <option value="All">All statuses</option>
+      <option value="AWAITING">Awaiting accept</option>
+      <option value="ACCEPTED">Accepted</option>
+      <option value="DECLINED">Declined</option>
+      {STATUSES.map(x=><option key={x} value={x}>{x}</option>)}
+     </select>
+    </div>
+    {filtered.length?<div className={s.tableWrap}><table className={s.tbl}>
+     <thead><tr><th>Client</th><th>Amount</th><th>Sent via</th><th>Status</th><th>Updated</th><th/></tr></thead>
+     <tbody>{filtered.map(i=><tr key={i.id} onClick={()=>router.push(`/dashboard/invoices/${encodeURIComponent(i.id)}?merchantId=${encodeURIComponent(merchantId)}`)}>
+      <td><div className={s.cl}><span className={s.cd}>{i.clientName?.slice(0,1).toUpperCase()}</span><span className={s.clName}>{i.clientName}</span></div></td>
+      <td className={s.mono}>{money(i.amount,i.tokenSymbol)}</td>
+      <td><span className={s.via}>{via(i)}</span></td>
+      <td><Tag i={i}/></td>
+      <td className={s.via}>{new Date(i.updatedAt||i.createdAt).toLocaleDateString()}</td>
+      <td className={s.rowActions} onClick={e=>e.stopPropagation()}>
+       <button className={s.kebab} aria-label={`Actions for ${i.clientName}`} onClick={()=>setMenuOpen(menuOpen===i.id?null:i.id)}><MoreVertical size={16}/></button>
+       {menuOpen===i.id&&<div className={s.menu} role="menu">
+        <Link href={`/dashboard/invoices/${encodeURIComponent(i.id)}?merchantId=${encodeURIComponent(merchantId)}`} className={s.menuItem} onClick={()=>setMenuOpen(null)}>View details</Link>
+        <button className={s.menuItem} onClick={()=>shareInvoice(i)}><Share size={14}/>Copy payment link</button>
+        <button className={`${s.menuItem} ${s.danger}`} disabled={i.status==='PAID'} title={i.status==='PAID'?'Paid invoices are kept for history.':'Delete invoice'} onClick={()=>{setMenuOpen(null);setConfirming(i)}}><Trash size={14}/>{i.status==='PAID'?'Paid - kept':'Delete invoice'}</button>
+       </div>}
+      </td>
+     </tr>)}</tbody>
+    </table></div>:<div className={s.empty}><div className={s.h}>No invoices found</div><p>Try another search or create a new invoice.</p><Link href={`/dashboard/create?merchantId=${merchantId}`} className={`${s.btn} ${s.btnDark}`}><Plus size={16}/>Create invoice</Link></div>}
+   </div>
+   <div style={{height:40}}/>
+  </div>
+  {confirming&&<div className={s.modalBackdrop} role="dialog" aria-modal="true" onClick={()=>setConfirming(null)}><div className={s.modal} onClick={e=>e.stopPropagation()}><div className={s.modalIcon}><Trash size={18}/></div><h2>Delete this invoice?</h2><p>This permanently removes the invoice from your account if the backend allows it. This cannot be undone.</p><div className={s.modalActions}><button className={`${s.btn} ${s.btnSoft}`} onClick={()=>setConfirming(null)}>Keep invoice</button><button className={`${s.btn} ${s.btnDanger}`} disabled={!!deleting} onClick={()=>removeInvoice(confirming)}>{deleting?'Deleting...':'Delete invoice'}</button></div></div></div>}
+ </div>;
+}

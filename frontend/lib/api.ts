@@ -2,7 +2,9 @@ export type InvoiceStatus = 'DRAFT'|'SENT'|'VIEWED'|'PENDING'|'PAID'|'PARTIALLY_
 export type PaymentStatus = 'DETECTED'|'VERIFYING'|'VERIFIED'|'REJECTED';
 export type Token = {symbol:string; name:string; decimals:number; fiatCurrency?:string|null; locale?:string|null; local?:boolean};
 export type Payment = {id:string;txHash:string;chainId:number;fromAddress:string;toAddress:string;tokenAddress:string;tokenSymbol?:string;amount:string;status:PaymentStatus;confirmations?:number;blockNumber?:number;rejectionReason?:string;detectedAt?:string;verifiedAt?:string};
-export type Invoice = {id:string;publicSlug:string;merchantId:string;clientName:string;clientContact?:string|null;amount:string|number;tokenSymbol:string;tokenAddress:string;chainId:number;receivingWallet:string;description?:string|null;dueDate?:string|null;status:InvoiceStatus;createdAt:string;updatedAt?:string;merchantDisplay?:{name:string;logoUrl?:string|null};payments?:Payment[]};
+export type ClientDecision = 'PENDING'|'ACCEPTED'|'DECLINED';
+export type Recurrence = 'NONE'|'WEEKLY'|'BIWEEKLY'|'MONTHLY';
+export type Invoice = {id:string;publicSlug:string;merchantId:string;clientName:string;clientContact?:string|null;clientEmail?:string|null;clientTelegram?:string|null;deliverEmail?:boolean;deliverTelegram?:boolean;clientDecision?:ClientDecision;clientDecisionAt?:string|null;recurrence?:Recurrence;recurrenceEndsAt?:string|null;amount:string|number;tokenSymbol:string;tokenAddress:string;chainId:number;receivingWallet:string;description?:string|null;dueDate?:string|null;status:InvoiceStatus;createdAt:string;updatedAt?:string;merchantDisplay?:{name:string;logoUrl?:string|null};payments?:Payment[]};
 export type Merchant = {id:string;walletAddress:string;profile?:{businessName:string;slug?:string;tagline?:string|null;logoUrl?:string|null;description?:string|null;websiteUrl?:string|null;socialLinks?:Record<string,string>|null;preferredToken?:string;acceptedTokens?:string[]}|null};
 export type Summary = {total:number;byStatus:Record<string,number>;outstandingTotal:number;outstandingByToken?:Record<string,number>};
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -21,6 +23,7 @@ export const api={
  getInvoice:(id:string)=>request<Invoice>(`/api/invoices/${encodeURIComponent(id)}`),
  getInvoiceBySlug:(slug:string)=>request<Invoice>(`/api/invoices/by-slug/${encodeURIComponent(slug)}`),
  markViewed:(slug:string)=>request<{status:InvoiceStatus}>(`/api/invoices/by-slug/${encodeURIComponent(slug)}/view`,{method:'POST'}),
+ setDecision:(slug:string,decision:'ACCEPTED'|'DECLINED')=>request<{clientDecision:ClientDecision;status:InvoiceStatus}>(`/api/invoices/by-slug/${encodeURIComponent(slug)}/decision`,{method:'POST',body:JSON.stringify({decision})}),
  getPaymentIntent:(id:string,payerAddress:string)=>request<{intentId:string;expiresAt:string;payerAddress:string;to:string;data:string;value:string;chainId:number}>(`/api/invoices/${encodeURIComponent(id)}/payment-intent?payerAddress=${encodeURIComponent(payerAddress)}`),
  verifyPayment:(invoiceId:string,intentId:string,txHash:string)=>request<{verified:boolean;invoiceStatus?:InvoiceStatus;reason?:string;status?:string;receivedAmount?:string;receivedToken?:string;remainingAmount?:string;overpaymentAmount?:string}>('/api/invoices/verify-payment',{method:'POST',body:JSON.stringify({invoiceId,intentId,txHash})}),
  listInvoices:(merchantId:string)=>request<Invoice[]>(`/api/invoices?merchantId=${encodeURIComponent(merchantId)}`),
