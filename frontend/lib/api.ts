@@ -17,6 +17,11 @@ export const api={
  setStoredSession:(s:WalletSession)=>setSession(s),
  clearStoredSession:()=>clearSession(),
  walletAuth:(data:{walletAddress:string;message:string;signature:string})=>request<{token:string;merchantId:string}>('/api/auth/wallet',{method:'POST',body:JSON.stringify(data)}),
+ googleAuth:(credential:string)=>request<{token:string;merchantId:string;walletAddress:string|null;email?:string|null;name?:string|null}>('/api/auth/google',{method:'POST',body:JSON.stringify({credential})}),
+ linkWallet:(data:{walletAddress:string;message:string;signature:string})=>request<{merchantId:string;walletAddress:string}>('/api/auth/link/wallet',{method:'POST',body:JSON.stringify(data)}),
+ linkGoogle:(credential:string)=>request<{merchantId:string;email?:string|null;name?:string|null;walletAddress:string|null}>('/api/auth/link/google',{method:'POST',body:JSON.stringify({credential})}),
+ getPayLink:(slug:string)=>request<{slug:string;businessName:string;logoUrl?:string|null;tagline?:string|null;preferredToken?:string|null;acceptedTokens?:string[];hasWallet:boolean}>(`/api/pay-links/${encodeURIComponent(slug)}`),
+ payLink:(slug:string,data:{amount:string;tokenSymbol:string;clientName?:string})=>request<{slug:string}>(`/api/pay-links/${encodeURIComponent(slug)}`,{method:'POST',body:JSON.stringify(data)}),
  getMerchant:(id:string)=>request<Merchant>(`/api/merchants/${encodeURIComponent(id)}`),
  updateMerchant:(id:string,data:Partial<Merchant['profile']> & {username?:string})=>request<any>(`/api/merchants/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify(data)}),
  createInvoice:(data:any)=>request<{id:string;publicUrl:string;status:InvoiceStatus}>('/api/invoices',{method:'POST',body:JSON.stringify(data)}),
@@ -38,6 +43,9 @@ export const api={
 const TOKEN_DISPLAY:Record<string,{currency:string;locale:string}>={
  USDm:{currency:'USD',locale:'en-US'},USDC:{currency:'USD',locale:'en-US'},USDT:{currency:'USD',locale:'en-US'},USAT:{currency:'USD',locale:'en-US'},
  NGNm:{currency:'NGN',locale:'en-NG'},
+ EURm:{currency:'EUR',locale:'de-DE'},AUDm:{currency:'AUD',locale:'en-AU'},BRLm:{currency:'BRL',locale:'pt-BR'},CADm:{currency:'CAD',locale:'en-CA'},
+ CHFm:{currency:'CHF',locale:'de-CH'},COPm:{currency:'COP',locale:'es-CO'},GBPm:{currency:'GBP',locale:'en-GB'},GHSm:{currency:'GHS',locale:'en-GH'},
+ JPYm:{currency:'JPY',locale:'ja-JP'},KESm:{currency:'KES',locale:'en-KE'},PHPm:{currency:'PHP',locale:'en-PH'},XOFm:{currency:'XOF',locale:'fr-SN'},ZARm:{currency:'ZAR',locale:'en-ZA'},
  wBRL:{currency:'BRL',locale:'pt-BR'},wARS:{currency:'ARS',locale:'es-AR'},wMXN:{currency:'MXN',locale:'es-MX'},
  wCOP:{currency:'COP',locale:'es-CO'},wCLP:{currency:'CLP',locale:'es-CL'},wPEN:{currency:'PEN',locale:'es-PE'},
 };

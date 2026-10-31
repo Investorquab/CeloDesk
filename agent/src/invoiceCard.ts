@@ -23,6 +23,9 @@ function esc(value: string) {
 const TOKEN_DISPLAY: Record<string, { currency: string; locale: string }> = {
   USDm: { currency: 'USD', locale: 'en-US' }, USDC: { currency: 'USD', locale: 'en-US' }, USDT: { currency: 'USD', locale: 'en-US' }, USAT: { currency: 'USD', locale: 'en-US' },
   NGNm: { currency: 'NGN', locale: 'en-NG' },
+  EURm: { currency: 'EUR', locale: 'de-DE' }, AUDm: { currency: 'AUD', locale: 'en-AU' }, BRLm: { currency: 'BRL', locale: 'pt-BR' }, CADm: { currency: 'CAD', locale: 'en-CA' },
+  CHFm: { currency: 'CHF', locale: 'de-CH' }, COPm: { currency: 'COP', locale: 'es-CO' }, GBPm: { currency: 'GBP', locale: 'en-GB' }, GHSm: { currency: 'GHS', locale: 'en-GH' },
+  JPYm: { currency: 'JPY', locale: 'ja-JP' }, KESm: { currency: 'KES', locale: 'en-KE' }, PHPm: { currency: 'PHP', locale: 'en-PH' }, XOFm: { currency: 'XOF', locale: 'fr-SN' }, ZARm: { currency: 'ZAR', locale: 'en-ZA' },
   wBRL: { currency: 'BRL', locale: 'pt-BR' }, wARS: { currency: 'ARS', locale: 'es-AR' }, wMXN: { currency: 'MXN', locale: 'es-MX' },
   wCOP: { currency: 'COP', locale: 'es-CO' }, wCLP: { currency: 'CLP', locale: 'es-CL' }, wPEN: { currency: 'PEN', locale: 'es-PE' },
 };

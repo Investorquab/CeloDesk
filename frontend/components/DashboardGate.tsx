@@ -2,6 +2,7 @@
 import {useEffect,useState} from 'react';
 import DashboardClient from './DashboardClient';
 import WalletConnect from './WalletConnect';
+import GoogleSignIn from './GoogleSignIn';
 import {api} from '../lib/api';
 
 export default function DashboardGate({initialMerchantId}:{initialMerchantId?:string}){
@@ -14,6 +15,6 @@ export default function DashboardGate({initialMerchantId}:{initialMerchantId?:st
    return ()=>window.removeEventListener('celodesk-session',sync);
  },[id]);
  if(!ready)return <div className="gate">Loading your CeloDesk account…</div>;
- if(!id)return <div className="gate"><div className="gateCard"><div className="brand"><span className="brandMark"/>CeloDesk</div><h1>Connect your wallet</h1><p className="muted">Your wallet is your account identity. No merchant ID needed.</p><WalletConnect/><div className="muted gateSmall">Non-custodial · payments settle directly to your wallet</div></div></div>;
+ if(!id)return <div className="gate"><div className="gateCard"><div className="brand"><span className="brandMark"/>CeloDesk</div><h1>Sign in to CeloDesk</h1><p className="muted">Continue with Google or your wallet. Either way, one account.</p><GoogleSignIn/><div className="gateOr">or</div><WalletConnect/><div className="muted gateSmall">Non-custodial · payments settle directly to your wallet</div></div></div>;
  return <DashboardClient merchantId={id}/>;
 }

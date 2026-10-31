@@ -6,6 +6,7 @@ import {api,Invoice,Merchant,Summary,money} from '../lib/api';
 import AppHeaderV2 from './AppHeaderV2';
 import AssistantBox from './AssistantBox';
 import {invoiceDisplay} from './StatusBadge';
+import CashOut from './CashOut';
 import {Plus,ArrowRight} from './Icons';
 import {userFacingError,ACCOUNT_SESSION_ERROR} from '../lib/userFacingError';
 import s from './AppShell.module.css';
@@ -38,7 +39,10 @@ export default function DashboardClient({merchantId}:{merchantId:string}){
 
    <div className={s.ph}>
     <div><div className={s.kick}>{greeting||'Welcome'}</div><h1>{name}</h1></div>
-    <Link href={`/dashboard/create?merchantId=${merchantId}`} className={`${s.btn} ${s.btnDark}`}><Plus size={16}/>New invoice</Link>
+    <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+     <CashOut walletAddress={m?.walletAddress}/>
+     <Link href={`/dashboard/create?merchantId=${merchantId}`} className={`${s.btn} ${s.btnDark}`}><Plus size={16}/>New invoice</Link>
+    </div>
    </div>
 
    <div className={s.tiles}>

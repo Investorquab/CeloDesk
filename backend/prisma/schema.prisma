@@ -47,7 +47,17 @@ model User {
   id            String    @id @default(cuid())
   telegramId    String?   @unique
   email         String?   @unique
-  walletAddress String    @unique
+  // Nullable so an account can be created by Google sign-in before (or
+  // without) a wallet. A wallet is still required to RECEIVE payments, so
+  // invoice creation checks for one. Unique allows many NULLs in Postgres.
+  walletAddress String?   @unique
+  // Google sign-in identity (the "sub" claim). Nullable; set when a user
+  // signs in with or links Google. One Google account maps to one user.
+  googleId      String?   @unique
+  // Display name from Google (used to prefill the business profile).
+  name          String?
+  // When the account's email was verified (Google verifies it for us).
+  emailVerifiedAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

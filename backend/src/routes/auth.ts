@@ -13,9 +13,11 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import { ethers } from 'ethers';
+import { OAuth2Client } from 'google-auth-library';
 import { PrismaClient } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
 import { getOrCreateMerchantByWallet } from '../services/merchantService';
+import { requireAuth, AuthedRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 export const router = Router();
@@ -32,8 +34,77 @@ const walletAuthLimiter = rateLimit({
 
 const SESSION_TTL = '7d';
 
+// Google "Sign in with Google" verification. The Client ID is public (it
+// ships in the frontend); the backend uses it to check that an ID token was
+// minted for THIS app. No client secret is needed for ID-token verification.
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+
 function sha256(value: string): string {
   return crypto.createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function signSession(user: { id: string; walletAddress: string | null }, secret: string): string {
+  return jwt.sign(
+    { merchantId: user.id, walletAddress: user.walletAddress },
+    secret,
+    { expiresIn: SESSION_TTL },
+  );
+}
+
+// Verifies a Google ID token (the "credential" from the Sign in with Google
+// button) and returns the stable identity fields. Throws on anything invalid
+// or unverified.
+async function verifyGoogleCredential(credential: string) {
+  if (!googleClient || !GOOGLE_CLIENT_ID) {
+    throw new Error('Google sign-in is not configured on this server.');
+  }
+  const ticket = await googleClient.verifyIdToken({
+    idToken: credential,
+    audience: GOOGLE_CLIENT_ID,
+  });
+  const payload = ticket.getPayload();
+  if (!payload?.sub) {
+    throw new Error('Invalid Google credential.');
+  }
+  if (!payload.email || payload.email_verified !== true) {
+    throw new Error('Your Google email address is not verified.');
+  }
+  return {
+    googleId: payload.sub,
+    email: payload.email.toLowerCase(),
+    name: payload.name ?? null,
+  };
+}
+
+// Verifies that `signature` over `message` was produced by `walletAddress`,
+// with the same replay protections as POST /wallet. Returns the checksummed
+// address or throws a user-facing error.
+function verifyWalletOwnership(walletAddress: string, message: string, signature: string): string {
+  if (!ethers.isAddress(walletAddress)) {
+    throw new Error('walletAddress is not a valid Ethereum/Celo address.');
+  }
+  if (!message.includes(walletAddress)) {
+    throw new Error('Signed message must include the wallet address.');
+  }
+  const timestampMatch = message.match(/Timestamp:\s*(\d{4}-\d{2}-\d{2}T[^\n]+)/i);
+  if (!timestampMatch) {
+    throw new Error('Signed message must include a Timestamp.');
+  }
+  const signedAt = Date.parse(timestampMatch[1].trim());
+  if (!Number.isFinite(signedAt) || Math.abs(Date.now() - signedAt) > 10 * 60 * 1000) {
+    throw new Error('Authentication message is expired or not yet valid.');
+  }
+  let recovered: string;
+  try {
+    recovered = ethers.verifyMessage(message, signature);
+  } catch {
+    throw new Error('Invalid signature.');
+  }
+  if (recovered.toLowerCase() !== walletAddress.toLowerCase()) {
+    throw new Error('Signature does not match the claimed wallet address.');
+  }
+  return ethers.getAddress(walletAddress);
 }
 
 function getJwtSecret(): string | undefined {
@@ -368,4 +439,141 @@ router.post('/telegram-link', async (req, res) => {
     walletAddress: user.walletAddress,
     token,
   });
+});
+
+// POST /api/auth/google
+// "Continue with Google": verify the ID token from the Sign in with Google
+// button, then find/link/create the account and issue a session, exactly
+// like wallet sign-in. Accounts are keyed by the Google "sub"; a matching
+// verified email links Google onto an existing account.
+router.post('/google', walletAuthLimiter, async (req, res) => {
+  const JWT_SECRET = getJwtSecret();
+  if (!JWT_SECRET) {
+    return res.status(500).json({ error: 'Server misconfigured: JWT_SECRET is not set.' });
+  }
+  if (!googleClient) {
+    return res.status(503).json({ error: 'Google sign-in is not configured on this server.' });
+  }
+
+  const parsed = z.object({ credential: z.string().min(10) }).safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
+  }
+
+  let info;
+  try {
+    info = await verifyGoogleCredential(parsed.data.credential);
+  } catch (err: any) {
+    return res.status(401).json({ error: err?.message || 'Google sign-in failed.' });
+  }
+
+  // 1) Returning Google user.
+  let user = await prisma.user.findUnique({ where: { googleId: info.googleId } });
+
+  // 2) Link Google onto an existing account that already uses this email.
+  if (!user) {
+    const byEmail = await prisma.user.findUnique({ where: { email: info.email } });
+    if (byEmail) {
+      user = await prisma.user.update({
+        where: { id: byEmail.id },
+        data: {
+          googleId: info.googleId,
+          name: byEmail.name ?? info.name,
+          emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date(),
+        },
+      });
+    }
+  }
+
+  // 3) Brand-new Google-only account (no wallet yet).
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        googleId: info.googleId,
+        email: info.email,
+        name: info.name,
+        emailVerifiedAt: new Date(),
+      },
+    });
+  }
+
+  return res.json({
+    merchantId: user.id,
+    walletAddress: user.walletAddress,
+    email: user.email,
+    name: user.name,
+    token: signSession(user, JWT_SECRET),
+  });
+});
+
+// POST /api/auth/link/wallet  (authenticated)
+// Attaches a wallet to the signed-in account (e.g. a Google user adding the
+// payout wallet they will receive invoices into). Requires a fresh signature
+// proving wallet ownership. Refuses a wallet already owned by someone else.
+router.post('/link/wallet', requireAuth, async (req: AuthedRequest, res) => {
+  const parsed = walletAuthSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
+  }
+
+  let normalizedWallet: string;
+  try {
+    normalizedWallet = verifyWalletOwnership(parsed.data.walletAddress, parsed.data.message, parsed.data.signature);
+  } catch (err: any) {
+    return res.status(401).json({ error: err?.message || 'Wallet verification failed.' });
+  }
+
+  const owner = await prisma.user.findUnique({ where: { walletAddress: normalizedWallet } });
+  if (owner && owner.id !== req.merchantId) {
+    return res.status(409).json({ error: 'That wallet is already linked to another CeloDesk account.' });
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.merchantId! },
+    data: { walletAddress: normalizedWallet },
+  });
+
+  return res.json({ merchantId: user.id, walletAddress: user.walletAddress });
+});
+
+// POST /api/auth/link/google  (authenticated)
+// Attaches a Google identity to the signed-in account (e.g. a wallet user
+// adding "Continue with Google"). Refuses a Google account already in use.
+router.post('/link/google', requireAuth, async (req: AuthedRequest, res) => {
+  if (!googleClient) {
+    return res.status(503).json({ error: 'Google sign-in is not configured on this server.' });
+  }
+
+  const parsed = z.object({ credential: z.string().min(10) }).safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
+  }
+
+  let info;
+  try {
+    info = await verifyGoogleCredential(parsed.data.credential);
+  } catch (err: any) {
+    return res.status(401).json({ error: err?.message || 'Google verification failed.' });
+  }
+
+  const googleOwner = await prisma.user.findUnique({ where: { googleId: info.googleId } });
+  if (googleOwner && googleOwner.id !== req.merchantId) {
+    return res.status(409).json({ error: 'That Google account is already linked to another CeloDesk account.' });
+  }
+  const emailOwner = await prisma.user.findUnique({ where: { email: info.email } });
+  if (emailOwner && emailOwner.id !== req.merchantId) {
+    return res.status(409).json({ error: 'That email is already used by another CeloDesk account.' });
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.merchantId! },
+    data: {
+      googleId: info.googleId,
+      email: info.email,
+      name: info.name ?? undefined,
+      emailVerifiedAt: new Date(),
+    },
+  });
+
+  return res.json({ merchantId: user.id, email: user.email, name: user.name, walletAddress: user.walletAddress });
 });

@@ -37,6 +37,14 @@ export async function createInvoice(input: CreateInvoiceInput) {
     where: { id: input.merchantId },
   });
 
+  // A wallet is where the payment lands. Accounts created by Google sign-in
+  // may not have one yet, so refuse to create an invoice until a payout
+  // wallet is on file (the UI prompts the user to connect/add one).
+  const receivingWallet = merchant.walletAddress;
+  if (!receivingWallet) {
+    throw new Error('Add a payout wallet to your account before creating an invoice.');
+  }
+
   const recurrence = input.recurrence ?? 'NONE';
   const nextRunAt = recurrence === 'NONE' ? null : computeNextRun(recurrence, new Date());
 
@@ -53,7 +61,7 @@ export async function createInvoice(input: CreateInvoiceInput) {
       tokenSymbol: token.symbol,
       tokenAddress: token.address,
       chainId: CELO_MAINNET_CHAIN_ID,
-      receivingWallet: merchant.walletAddress,
+      receivingWallet,
       description: input.description,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
       status: input.initialStatus ?? 'SENT',
@@ -226,7 +234,7 @@ export function toPublicInvoiceView(invoice: Awaited<ReturnType<typeof getInvoic
       )?.symbol ?? payment.tokenAddress,
     })),
     merchantDisplay: {
-      name: profile?.businessName ?? shortenAddress(invoice.merchant.walletAddress),
+      name: profile?.businessName ?? shortenAddress(invoice.merchant.walletAddress ?? invoice.receivingWallet),
       logoUrl: profile?.logoUrl ?? null,
     },
   };

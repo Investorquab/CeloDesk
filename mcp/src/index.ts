@@ -277,9 +277,11 @@ function createServer() {
           .string()
           .min(2)
           .describe(
-            'Payment token symbol: USDm, USDC, USDT, NGNm, or a Ripio wFIAT ' +
-              'LatAm currency (wBRL, wARS, wMXN, wCOP, wCLP, wPEN). The backend ' +
-              'validates it against the verified token registry.',
+            'Payment token symbol. One of: USD stablecoins (USDm, USDC, USDT, USAT); ' +
+              'a Mento local-currency stable asset (NGNm, EURm, AUDm, BRLm, CADm, CHFm, ' +
+              'COPm, GBPm, GHSm, JPYm, KESm, PHPm, XOFm, ZARm); or a Ripio wFIAT LatAm ' +
+              'currency (wBRL, wARS, wMXN, wCOP, wCLP, wPEN). The backend validates it ' +
+              'against the verified token registry.',
           ),
         description: z.string().min(1).max(500),
         dueDate: z.string().optional(),

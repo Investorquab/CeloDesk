@@ -42,6 +42,14 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
   if(typeof window!=='undefined' && (window as any).ethereum?.isMiniPay) setIsMiniPay(true);
  },[]);
 
+ // MiniPay Mini App: the wallet is injected and connects implicitly, so warm
+ // the connection on load (no "connect wallet" step). Only in MiniPay, where
+ // this is silent; in other wallets requesting accounts on load would prompt.
+ useEffect(()=>{
+  if(!isMiniPay || typeof window==='undefined' || !window.ethereum) return;
+  window.ethereum.request({method:'eth_requestAccounts'}).catch(()=>{});
+ },[isMiniPay]);
+
  useEffect(()=>{api.getInvoiceBySlug(slug).then(async x=>{const fresh=x;setInv(fresh);if((fresh.status==='PAID'||fresh.status==='OVERPAID')&&fresh.payments?.some(p=>p.status==='VERIFIED'))setShowSuccess(true);await api.markViewed(slug).catch(()=>{})}).catch(e=>setErr(userFacingError(e,'We could not load this invoice. Please try again.')))},[slug]);
 
  useEffect(()=>{if(!inv||payState!=='pending'||!intentId)return;let n=0;const timer=setInterval(async()=>{n++;try{const r=await api.verifyPayment(inv.id,intentId,tx);if(r.verified){setPayState('success');setShowSuccess(true);setInv(await api.getInvoiceBySlug(slug));clearInterval(timer)}else if(n>=12)setReason(r.reason||'Still waiting for confirmation.')}catch(e:any){setReason(userFacingError(e,'Payment verification check failed.'))}},5000);return()=>clearInterval(timer)},[inv,payState,tx,slug]);
@@ -95,19 +103,25 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
     const accounts = await window.ethereum.request({method:'eth_requestAccounts'});
     const from = accounts?.[0];
     if(!from){throw new Error('No wallet account selected.');}
-    const targetChainId = '0x' + Number(inv.chainId).toString(16);
-    const currentChainId = await window.ethereum.request({method:'eth_chainId'});
-    if(currentChainId.toLowerCase() !== targetChainId.toLowerCase()){
-      try{
-        await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:targetChainId}]});
-      }catch(switchError:any){
-        if(switchError?.code === 4902){
-          await window.ethereum.request({method:'wallet_addEthereumChain',params:[{chainId:'0xa4ec',chainName:'Celo Mainnet',nativeCurrency:{name:'Celo',symbol:'CELO',decimals:18},rpcUrls:['https://forno.celo.org'],blockExplorerUrls:['https://celoscan.io']}]});
-        }else{throw switchError;}
-      }
-      const confirmedChainId = await window.ethereum.request({method:'eth_chainId'});
-      if(confirmedChainId.toLowerCase() !== targetChainId.toLowerCase()){
-        throw new Error('Please switch your wallet to Celo Mainnet to continue.');
+    // Inside MiniPay the wallet is always on Celo mainnet and does not support
+    // wallet_switchEthereumChain / wallet_addEthereumChain, so skip the network
+    // switch there (calling it can reject and block the payment). Other wallets
+    // are still switched to Celo as before.
+    if(!isMiniPay){
+      const targetChainId = '0x' + Number(inv.chainId).toString(16);
+      const currentChainId = await window.ethereum.request({method:'eth_chainId'});
+      if(currentChainId.toLowerCase() !== targetChainId.toLowerCase()){
+        try{
+          await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:targetChainId}]});
+        }catch(switchError:any){
+          if(switchError?.code === 4902){
+            await window.ethereum.request({method:'wallet_addEthereumChain',params:[{chainId:'0xa4ec',chainName:'Celo Mainnet',nativeCurrency:{name:'Celo',symbol:'CELO',decimals:18},rpcUrls:['https://forno.celo.org'],blockExplorerUrls:['https://celoscan.io']}]});
+          }else{throw switchError;}
+        }
+        const confirmedChainId = await window.ethereum.request({method:'eth_chainId'});
+        if(confirmedChainId.toLowerCase() !== targetChainId.toLowerCase()){
+          throw new Error('Please switch your wallet to Celo Mainnet to continue.');
+        }
       }
     }
     const intent = await api.getPaymentIntent(inv.id,from);

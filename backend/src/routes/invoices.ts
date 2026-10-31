@@ -70,7 +70,7 @@ router.post('/', requireAuth, async (req: AuthedRequest, res) => {
         });
         const merchantName =
           merchant?.profile?.businessName ||
-          (merchant ? `${merchant.walletAddress.slice(0, 6)}...${merchant.walletAddress.slice(-4)}` : 'A CeloDesk merchant');
+          (merchant?.walletAddress ? `${merchant.walletAddress.slice(0, 6)}...${merchant.walletAddress.slice(-4)}` : 'A CeloDesk merchant');
         const result = await sendInvoiceEmail({
           merchantName,
           clientName: invoice.clientName,
