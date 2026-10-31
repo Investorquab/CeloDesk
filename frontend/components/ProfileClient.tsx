@@ -10,7 +10,7 @@ import s from './AppShell.module.css';
 export default function ProfileClient({merchantId}:{merchantId:string}){
  const [m,setM]=useState<Merchant|null>(null),[name,setName]=useState(''),[tag,setTag]=useState(''),[username,setUsername]=useState(''),[saving,setSaving]=useState(false),[msg,setMsg]=useState(''),[err,setErr]=useState(''),[copied,setCopied]=useState(false);
  useEffect(()=>{api.getMerchant(merchantId).then(x=>{setM(x);setName(x.profile?.businessName||'');setTag(x.profile?.tagline||'');setUsername(x.profile?.slug||'')}).catch(e=>setErr(userFacingError(e,'Could not load your profile.')))},[merchantId]);
- async function save(){setSaving(true);setErr('');try{await api.updateMerchant(merchantId,{businessName:name,tagline:tag,username:username.trim()||undefined});setMsg('Profile saved');setTimeout(()=>setMsg(''),2200)}catch(e:any){setErr(userFacingError(e,'Could not save your profile.'))}finally{setSaving(false)}}
+ async function save(){setSaving(true);setErr('');try{await api.updateMerchant(merchantId,{businessName:name,tagline:tag,username:username.trim()||undefined});const fresh=await api.getMerchant(merchantId).catch(()=>null);if(fresh)setM(fresh);setMsg('Profile saved');setTimeout(()=>setMsg(''),2200)}catch(e:any){setErr(userFacingError(e,'Could not save your profile.'))}finally{setSaving(false)}}
  function logout(){api.clearStoredSession();window.dispatchEvent(new Event('celodesk-session'));window.location.href='/'}
  return <div className={s.app}>
   <AppHeaderV2 merchantId={merchantId} businessName={m?.profile?.businessName}/>
