@@ -14,7 +14,7 @@ import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import { ethers } from 'ethers';
 import { OAuth2Client } from 'google-auth-library';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
 import { getOrCreateMerchantByWallet } from '../services/merchantService';
 import { requireAuth, AuthedRequest } from '../middleware/auth';
@@ -109,6 +109,36 @@ function verifyWalletOwnership(walletAddress: string, message: string, signature
 
 function getJwtSecret(): string | undefined {
   return process.env.JWT_SECRET;
+}
+
+// Merge one CeloDesk account's data into another, then delete the emptied one.
+// Moves the dropped account's invoices and (per preference) its business
+// profile onto the surviving account. Identity scalar fields (wallet / google
+// / email / telegram) are set by the CALLER on the surviving account AFTER this
+// runs, because deleting `dropId` is what frees those unique values. Must run
+// inside a transaction so a half-finished merge can never be observed.
+async function mergeAccounts(
+  tx: Prisma.TransactionClient,
+  keepId: string,
+  dropId: string,
+  preferDropProfile: boolean,
+): Promise<void> {
+  await tx.invoice.updateMany({ where: { merchantId: dropId }, data: { merchantId: keepId } });
+
+  const keepProfile = await tx.profile.findUnique({ where: { userId: keepId } });
+  const dropProfile = await tx.profile.findUnique({ where: { userId: dropId } });
+
+  if (preferDropProfile && dropProfile) {
+    // Keep the dropped account's profile (e.g. an established wallet user's
+    // business name + public pay-link slug) over the new account's default.
+    if (keepProfile) await tx.profile.delete({ where: { id: keepProfile.id } });
+    await tx.profile.update({ where: { id: dropProfile.id }, data: { userId: keepId } });
+  } else if (dropProfile) {
+    if (keepProfile) await tx.profile.delete({ where: { id: dropProfile.id } });
+    else await tx.profile.update({ where: { id: dropProfile.id }, data: { userId: keepId } });
+  }
+
+  await tx.user.delete({ where: { id: dropId } });
 }
 
 const walletAuthSchema = z.object({
@@ -509,7 +539,14 @@ router.post('/google', walletAuthLimiter, async (req, res) => {
 // POST /api/auth/link/wallet  (authenticated)
 // Attaches a wallet to the signed-in account (e.g. a Google user adding the
 // payout wallet they will receive invoices into). Requires a fresh signature
-// proving wallet ownership. Refuses a wallet already owned by someone else.
+// proving wallet ownership.
+//
+// If that wallet already has its own CeloDesk account (a returning wallet user
+// who signed in with Google first), we MERGE: the wallet account's invoices and
+// business profile move onto the signed-in account, and the emptied wallet
+// account is removed. The signature is what makes this safe — only the true
+// wallet owner can trigger it, so no one can claim another account by typing a
+// public address. From then on, either sign-in reaches the same data.
 router.post('/link/wallet', requireAuth, async (req: AuthedRequest, res) => {
   const parsed = walletAuthSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -523,13 +560,41 @@ router.post('/link/wallet', requireAuth, async (req: AuthedRequest, res) => {
     return res.status(401).json({ error: err?.message || 'Wallet verification failed.' });
   }
 
+  const current = await prisma.user.findUnique({ where: { id: req.merchantId! } });
+  if (!current) {
+    return res.status(401).json({ error: 'Your CeloDesk session is no longer valid. Please sign in again.' });
+  }
+
   const owner = await prisma.user.findUnique({ where: { walletAddress: normalizedWallet } });
-  if (owner && owner.id !== req.merchantId) {
-    return res.status(409).json({ error: 'That wallet is already linked to another CeloDesk account.' });
+
+  if (owner && owner.id !== current.id) {
+    // The wallet already has its own account -> merge it into the current one.
+    if (owner.googleId && owner.googleId !== current.googleId) {
+      return res.status(409).json({
+        error: 'That wallet belongs to an account that already uses a different Google sign-in. Please sign in with that wallet instead.',
+      });
+    }
+
+    const merged = await prisma.$transaction(async (tx) => {
+      // Prefer the wallet account's profile (its public pay-link slug/business).
+      await mergeAccounts(tx, current.id, owner.id, true);
+      return tx.user.update({
+        where: { id: current.id },
+        data: {
+          walletAddress: normalizedWallet,
+          telegramId: current.telegramId ?? owner.telegramId ?? undefined,
+          email: current.email ?? owner.email ?? undefined,
+          name: current.name ?? owner.name ?? undefined,
+          emailVerifiedAt: current.emailVerifiedAt ?? owner.emailVerifiedAt ?? undefined,
+        },
+      });
+    });
+
+    return res.json({ merchantId: merged.id, walletAddress: merged.walletAddress, merged: true });
   }
 
   const user = await prisma.user.update({
-    where: { id: req.merchantId! },
+    where: { id: current.id },
     data: { walletAddress: normalizedWallet },
   });
 
@@ -538,7 +603,13 @@ router.post('/link/wallet', requireAuth, async (req: AuthedRequest, res) => {
 
 // POST /api/auth/link/google  (authenticated)
 // Attaches a Google identity to the signed-in account (e.g. a wallet user
-// adding "Continue with Google"). Refuses a Google account already in use.
+// adding "Continue with Google").
+//
+// If that Google identity (or its email) already has its own CeloDesk account,
+// we MERGE it into the signed-in account, mirroring /link/wallet. Google itself
+// proves the user controls the email, so this is safe. We refuse only when the
+// other account is tied to a different wallet (that account should be reached by
+// signing that wallet), or when Google and email point at two different accounts.
 router.post('/link/google', requireAuth, async (req: AuthedRequest, res) => {
   if (!googleClient) {
     return res.status(503).json({ error: 'Google sign-in is not configured on this server.' });
@@ -556,21 +627,58 @@ router.post('/link/google', requireAuth, async (req: AuthedRequest, res) => {
     return res.status(401).json({ error: err?.message || 'Google verification failed.' });
   }
 
-  const googleOwner = await prisma.user.findUnique({ where: { googleId: info.googleId } });
-  if (googleOwner && googleOwner.id !== req.merchantId) {
-    return res.status(409).json({ error: 'That Google account is already linked to another CeloDesk account.' });
+  const current = await prisma.user.findUnique({ where: { id: req.merchantId! } });
+  if (!current) {
+    return res.status(401).json({ error: 'Your CeloDesk session is no longer valid. Please sign in again.' });
   }
+
+  const googleOwner = await prisma.user.findUnique({ where: { googleId: info.googleId } });
   const emailOwner = await prisma.user.findUnique({ where: { email: info.email } });
-  if (emailOwner && emailOwner.id !== req.merchantId) {
-    return res.status(409).json({ error: 'That email is already used by another CeloDesk account.' });
+
+  // Collect any OTHER accounts this Google identity / email already belongs to.
+  const others: NonNullable<typeof googleOwner>[] = [];
+  if (googleOwner && googleOwner.id !== current.id) others.push(googleOwner);
+  if (emailOwner && emailOwner.id !== current.id && emailOwner.id !== googleOwner?.id) others.push(emailOwner);
+
+  if (others.length > 1) {
+    return res.status(409).json({
+      error: 'This Google account and email belong to two different CeloDesk accounts. Please contact support to merge them.',
+    });
+  }
+
+  const other = others[0];
+  if (other) {
+    if (other.walletAddress && other.walletAddress !== current.walletAddress) {
+      return res.status(409).json({
+        error: 'That Google account is tied to a different wallet account. Please sign in with that wallet instead.',
+      });
+    }
+
+    const merged = await prisma.$transaction(async (tx) => {
+      // Prefer the current (likely wallet) account's profile and slug.
+      await mergeAccounts(tx, current.id, other.id, false);
+      return tx.user.update({
+        where: { id: current.id },
+        data: {
+          googleId: info.googleId,
+          email: info.email,
+          name: current.name ?? info.name ?? undefined,
+          emailVerifiedAt: new Date(),
+          walletAddress: current.walletAddress ?? other.walletAddress ?? undefined,
+          telegramId: current.telegramId ?? other.telegramId ?? undefined,
+        },
+      });
+    });
+
+    return res.json({ merchantId: merged.id, email: merged.email, name: merged.name, walletAddress: merged.walletAddress, merged: true });
   }
 
   const user = await prisma.user.update({
-    where: { id: req.merchantId! },
+    where: { id: current.id },
     data: {
       googleId: info.googleId,
       email: info.email,
-      name: info.name ?? undefined,
+      name: current.name ?? info.name ?? undefined,
       emailVerifiedAt: new Date(),
     },
   });
