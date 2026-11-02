@@ -68,9 +68,10 @@ router.post('/', requireAuth, async (req: AuthedRequest, res) => {
           where: { id: req.merchantId! },
           include: { profile: true },
         });
-        const merchantName =
-          merchant?.profile?.businessName ||
-          (merchant?.walletAddress ? `${merchant.walletAddress.slice(0, 6)}...${merchant.walletAddress.slice(-4)}` : 'A CeloDesk merchant');
+        // Clients should never see a raw 0x wallet address as the "sender":
+        // it looks alarming and unprofessional. Fall back to a neutral label
+        // when the merchant has not set a business name yet.
+        const merchantName = merchant?.profile?.businessName || 'A CeloDesk merchant';
         const result = await sendInvoiceEmail({
           merchantName,
           clientName: invoice.clientName,

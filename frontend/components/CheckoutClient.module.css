@@ -18,20 +18,20 @@
 .mono{font-family:var(--mono); font-variant-numeric:tabular-nums; letter-spacing:-.02em;}
 
 /* top band */
-.topband{background:var(--ink); color:#fff; padding:18px 0 86px;}
+.topband{background:var(--ink); color:#fff; padding:18px 0 96px;}
 .topInner{width:min(560px, calc(100% - 36px)); margin:0 auto; display:flex; align-items:center; justify-content:space-between;}
 .brand{display:flex; align-items:center; gap:10px; font-family:var(--display); font-weight:700; font-size:18px;}
 .mark{width:28px; height:28px; border-radius:8px; background:var(--green); display:grid; place-items:center; color:#fff; font-family:var(--display); font-weight:800; font-size:15px;}
 .iconBtn{width:36px; height:36px; border-radius:10px; border:1px solid rgba(255,255,255,.16); background:transparent; color:#fff; display:grid; place-items:center; cursor:pointer; transition:background .15s ease;}
 .iconBtn:hover{background:rgba(255,255,255,.1);}
 
-.merchant{width:min(560px, calc(100% - 36px)); margin:18px auto 0; display:flex; align-items:center; gap:13px; color:#fff;}
+.merchant{width:min(560px, calc(100% - 36px)); margin:-80px auto 0; display:flex; align-items:center; gap:13px; color:#fff;}
 .mLogo{width:46px; height:46px; border-radius:12px; background:rgba(63,213,150,.16); color:var(--green-bright); display:grid; place-items:center; font-weight:700; font-size:18px;}
 .mName{font-weight:600;}
 .mSub{font-size:13px; color:var(--on-dark-soft); margin-top:2px;}
 
 /* invoice card */
-.cardWrap{width:min(560px, calc(100% - 36px)); margin:-68px auto 0;}
+.cardWrap{width:min(560px, calc(100% - 36px)); margin:16px auto 0;}
 .card{background:var(--surface); border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:0 30px 70px -34px rgba(10,28,20,.4);}
 .amt{font-family:var(--display); font-weight:800; font-size:40px; letter-spacing:-.03em; padding:24px 24px 2px;}
 .amt .tok{font-family:var(--mono); font-size:15px; color:var(--txt-soft); margin-left:9px; font-weight:600;}

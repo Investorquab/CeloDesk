@@ -19,10 +19,8 @@ const prisma = new PrismaClient();
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://celo-desk.vercel.app').replace(/\/$/, '');
 
 function merchantDisplayName(merchant: any): string {
-  return (
-    merchant?.profile?.businessName ||
-    (merchant?.walletAddress ? `${merchant.walletAddress.slice(0, 6)}...${merchant.walletAddress.slice(-4)}` : 'A CeloDesk merchant')
-  );
+  // Never surface a raw 0x wallet address to clients as the sender name.
+  return merchant?.profile?.businessName || 'A CeloDesk merchant';
 }
 
 // First scheduled occurrence strictly after `now`, so a server that was down

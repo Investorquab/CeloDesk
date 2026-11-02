@@ -208,3 +208,26 @@
   .atabs{order:3; width:100%; margin:0 0 4px;}
   .in{height:auto; flex-wrap:wrap; padding:12px 0; gap:12px;}
 }
+
+/* phones: tighter gutters, stacked fields, smaller display type */
+@media(max-width:560px){
+  .wrap{width:calc(100% - 28px);}
+  .ph{margin:20px 0 16px;}
+  .ph h1{font-size:24px;}
+  .two{grid-template-columns:1fr;}
+  .tile{padding:18px;}
+  .tile .tv{font-size:24px;}
+  .brand{font-size:18px;}
+  .phd{padding:15px 16px;}
+  .tbl th{padding:11px 16px;}
+  .tbl td{padding:13px 16px;}
+  .toolbar{padding:14px 16px;}
+  .metaGrid{padding:18px 16px;}
+  .detailHead{padding:18px 16px;}
+  .detailAmt{font-size:28px;}
+  .invAmt{font-size:26px;}
+  .profHero{padding:20px;}
+  .profHero h1{font-size:22px;}
+  .modal{padding:22px;}
+  .me .name{display:none;}
+}

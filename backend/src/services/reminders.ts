@@ -21,10 +21,8 @@ export const REMINDER_GRACE_MS = process.env.REMINDER_GRACE_MS ? Number(process.
 const UNPAID = ['SENT', 'VIEWED', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE'] as const;
 
 function merchantDisplayName(merchant: any): string {
-  return (
-    merchant?.profile?.businessName ||
-    (merchant?.walletAddress ? `${merchant.walletAddress.slice(0, 6)}...${merchant.walletAddress.slice(-4)}` : 'A CeloDesk merchant')
-  );
+  // Never surface a raw 0x wallet address to clients as the sender name.
+  return merchant?.profile?.businessName || 'A CeloDesk merchant';
 }
 
 // Shared eligibility: unpaid one-off invoice (never the recurring anchor),

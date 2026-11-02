@@ -143,7 +143,7 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
 
  const verifiedTotal=(inv.payments||[]).filter(p=>p.status==='VERIFIED').reduce((sum,p)=>sum+Number(p.amount),0);
  const amountDue=Math.max(0,Number(inv.amount)-verifiedTotal);
- const merchantName=inv.merchantDisplay?.name||shortAddress(inv.receivingWallet);
+ const merchantName=inv.merchantDisplay?.name||'A CeloDesk merchant';
  const initials=(merchantName.trim()[0]||'C').toUpperCase();
  const u=shareUrl();
  const qrValue=paymentQrValue(inv);
