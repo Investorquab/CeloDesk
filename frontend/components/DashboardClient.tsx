@@ -7,6 +7,7 @@ import AppHeaderV2 from './AppHeaderV2';
 import AssistantBox from './AssistantBox';
 import {invoiceDisplay} from './StatusBadge';
 import CashOut from './CashOut';
+import {isRipioWFiat,ripioOnrampUrl} from '../lib/ripio';
 import {Plus,ArrowRight} from './Icons';
 import {userFacingError,ACCOUNT_SESSION_ERROR} from '../lib/userFacingError';
 import s from './AppShell.module.css';
@@ -41,6 +42,10 @@ export default function DashboardClient({merchantId}:{merchantId:string}){
     <div><div className={s.kick}>{greeting||'Welcome'}</div><h1>{name}</h1></div>
     <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
      <CashOut walletAddress={m?.walletAddress}/>
+     <a
+       href={ripioOnrampUrl({token:isRipioWFiat(m?.profile?.preferredToken||'')?m?.profile?.preferredToken:undefined,address:m?.walletAddress})}
+       target="_blank" rel="noopener noreferrer"
+       className={`${s.btn} ${s.btnLine}`} title="Top up local-currency stablecoins via Ripio">Add funds</a>
      <Link href={`/dashboard/create?merchantId=${merchantId}`} className={`${s.btn} ${s.btnDark}`}><Plus size={16}/>New invoice</Link>
     </div>
    </div>

@@ -6,6 +6,7 @@ import {api,Invoice,money,shortAddress} from '../lib/api';
 import {ArrowLeft,Check,Copy,Download,Share,Wallet,Qr,Clock,Alert} from './Icons';
 import {userFacingError} from '../lib/userFacingError';
 import {downloadInvoiceCard,shareInvoiceFile} from '../lib/invoiceCard';
+import {isRipioWFiat,ripioOnrampUrl,wfiatCurrencyName} from '../lib/ripio';
 import styles from './CheckoutClient.module.css';
 
 function shareUrl(){return typeof window!=='undefined'?window.location.href:''}
@@ -36,6 +37,7 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
  const [showQr,setShowQr]=useState(false);
  const [isMiniPay,setIsMiniPay]=useState(false);
  const [decisionBusy,setDecisionBusy]=useState(false);
+ const [account,setAccount]=useState('');
  const successSoundPlayedRef=useRef(false);
 
  useEffect(()=>{
@@ -47,7 +49,7 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
  // this is silent; in other wallets requesting accounts on load would prompt.
  useEffect(()=>{
   if(!isMiniPay || typeof window==='undefined' || !window.ethereum) return;
-  window.ethereum.request({method:'eth_requestAccounts'}).catch(()=>{});
+  window.ethereum.request({method:'eth_requestAccounts'}).then((a:any)=>{if(a?.[0])setAccount(a[0])}).catch(()=>{});
  },[isMiniPay]);
 
  useEffect(()=>{api.getInvoiceBySlug(slug).then(async x=>{const fresh=x;setInv(fresh);if((fresh.status==='PAID'||fresh.status==='OVERPAID')&&fresh.payments?.some(p=>p.status==='VERIFIED'))setShowSuccess(true);await api.markViewed(slug).catch(()=>{})}).catch(e=>setErr(userFacingError(e,'We could not load this invoice. Please try again.')))},[slug]);
@@ -259,6 +261,12 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
 
          <button className={`${styles.btn} ${styles.btnGreen} ${styles.btnBlock}`} style={{marginTop:14}} onClick={pay} disabled={busy}>Pay {money(amountDue,inv.tokenSymbol)}</button>
          <div className={styles.gasNote}>You pay only the amount shown, direct to the merchant. CeloDesk never holds your funds.</div>
+         {isRipioWFiat(inv.tokenSymbol)&&<a
+           href={ripioOnrampUrl({token:inv.tokenSymbol,amount:Math.ceil(amountDue),address:account||undefined})}
+           target="_blank" rel="noopener noreferrer"
+           style={{display:'block',textAlign:'center',marginTop:12,fontSize:12.5,fontWeight:600,color:'var(--brandDeep,#0b7d5a)'}}>
+           Don&apos;t have {wfiatCurrencyName(inv.tokenSymbol)}? Add {inv.tokenSymbol} with Ripio &rarr;
+         </a>}
        </div>
      )}
 
