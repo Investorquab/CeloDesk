@@ -66,6 +66,7 @@ export default function LandingClient() {
             <a href="#product">Product</a>
             <a href="#currencies">Currencies</a>
             <a href="#how">How it works</a>
+            <a href="#batch">Batch Pay</a>
             <a href="#developers">Developers</a>
           </nav>
           <div className={styles['nav-right']}>
@@ -196,6 +197,22 @@ export default function LandingClient() {
             <div className={cx('lrow', 'reveal')}><div className={styles.step}>step 03</div><h4>Accept</h4><p>The client reviews and agrees before any payment is possible.</p></div>
             <div className={cx('lrow', 'reveal')}><div className={styles.step}>step 04</div><h4>Pay</h4><p>They pay from MiniPay or any Celo wallet, straight to you.</p></div>
             <div className={cx('lrow', 'reveal')}><div className={styles.step}>step 05</div><h4>Verify</h4><p>Celo confirms the transfer and the invoice turns paid, with a receipt for both sides.</p></div>
+          </div>
+        </div>
+      </section>
+
+      {/* BATCH PAY */}
+      <section className={cx('sec', 'sec-top0')} id="batch">
+        <div className={styles.wrap}>
+          <div className={cx('sec-head', 'reveal')}>
+            <div className={cx('kick')}>Batch Pay</div>
+            <h2>Pay a whole group in one go</h2>
+            <p>Prizes, bounties, contractors, a team split. Collect everyone with one link, approve the real ones, and pay them all in a single transaction.</p>
+          </div>
+          <div className={styles.ledger}>
+            <div className={cx('lrow', 'reveal')}><div className={styles.step}>step 01</div><h4>Share one link</h4><p>Create a batch and share its link. Each person submits their own name, wallet, amount and currency.</p></div>
+            <div className={cx('lrow', 'reveal')}><div className={styles.step}>step 02</div><h4>Approve the real ones</h4><p>Review every submission and accept or reject, so no one can slip onto the payout.</p></div>
+            <div className={cx('lrow', 'reveal')}><div className={styles.step}>step 03</div><h4>Pay everyone at once</h4><p>One confirmation pays every accepted person in that currency, directly on Celo. No sending them one by one.</p></div>
           </div>
         </div>
       </section>
