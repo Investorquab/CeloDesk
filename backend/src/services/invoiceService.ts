@@ -234,7 +234,9 @@ export function toPublicInvoiceView(invoice: Awaited<ReturnType<typeof getInvoic
       )?.symbol ?? payment.tokenAddress,
     })),
     merchantDisplay: {
-      name: profile?.businessName ?? shortenAddress(invoice.merchant.walletAddress ?? invoice.receivingWallet),
+      // Never show a raw 0x address as the merchant's name on the pay page;
+      // fall back to a neutral label when no business name is set.
+      name: profile?.businessName ?? 'A CeloDesk merchant',
       logoUrl: profile?.logoUrl ?? null,
     },
   };
