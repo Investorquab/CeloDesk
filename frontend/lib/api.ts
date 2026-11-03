@@ -7,6 +7,11 @@ export type Recurrence = 'NONE'|'WEEKLY'|'BIWEEKLY'|'MONTHLY';
 export type Invoice = {id:string;publicSlug:string;merchantId:string;clientName:string;clientContact?:string|null;clientEmail?:string|null;clientTelegram?:string|null;deliverEmail?:boolean;deliverTelegram?:boolean;clientDecision?:ClientDecision;clientDecisionAt?:string|null;recurrence?:Recurrence;recurrenceEndsAt?:string|null;amount:string|number;tokenSymbol:string;tokenAddress:string;chainId:number;receivingWallet:string;description?:string|null;dueDate?:string|null;status:InvoiceStatus;createdAt:string;updatedAt?:string;merchantDisplay?:{name:string;logoUrl?:string|null};payments?:Payment[]};
 export type Merchant = {id:string;walletAddress:string;profile?:{businessName:string;slug?:string;tagline?:string|null;logoUrl?:string|null;description?:string|null;websiteUrl?:string|null;socialLinks?:Record<string,string>|null;preferredToken?:string;acceptedTokens?:string[]}|null};
 export type Summary = {total:number;byStatus:Record<string,number>;outstandingTotal:number;outstandingByToken?:Record<string,number>};
+export type CollectionItemStatus='PENDING'|'ACCEPTED'|'REJECTED'|'PAID';
+export type CollectionItem={id:string;payeeName:string;payeeWallet:string;tokenSymbol:string;tokenAddress:string;amount:string;note?:string|null;status:CollectionItemStatus;txHash?:string|null;paidAt?:string|null;createdAt:string};
+export type Collection={id:string;publicSlug:string;title:string;description?:string|null;allowedTokens:string[];status:'OPEN'|'CLOSED'|'PAID';createdAt:string;items:CollectionItem[];counts:{total:number;pending:number;accepted:number;rejected:number;paid:number}};
+export type CollectionPublic={title:string;description?:string|null;allowedTokens:string[];status:string;organizer:string;open:boolean};
+
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 async function request<T>(path:string, options:RequestInit={}) { const session=getSession(); const headers=new Headers(options.headers); headers.set('Content-Type','application/json'); if(session?.token) headers.set('Authorization',`Bearer ${session.token}`); const r=await fetch(`${API}${path}`,{...options,headers,cache:'no-store'}); const b=await r.json().catch(()=>({})); if(!r.ok) throw new Error(b.error||b.message||`Request failed (${r.status})`); return b as T; }
 import {getSession,setSession,clearSession,WalletSession} from './session';
@@ -36,6 +41,13 @@ export const api={
  listOutstanding:(merchantId:string)=>request<Invoice[]>(`/api/invoices?merchantId=${encodeURIComponent(merchantId)}&status=outstanding`),
  getSummary:(merchantId:string)=>request<Summary>(`/api/invoices/summary/${encodeURIComponent(merchantId)}`),
  agent:(merchantId:string,message:string,history:{role:'user'|'assistant';content:string}[]=[])=>request<{reply:string;artifacts:any[]}>(`/api/agent`,{method:'POST',body:JSON.stringify({message,history})}),
+ listCollections:()=>request<Collection[]>('/api/collections'),
+ getCollection:(id:string)=>request<Collection>(`/api/collections/${encodeURIComponent(id)}`),
+ createCollection:(data:{title:string;description?:string;allowedTokens?:string[]})=>request<Collection>('/api/collections',{method:'POST',body:JSON.stringify(data)}),
+ setCollectionStatus:(id:string,status:'OPEN'|'CLOSED')=>request<Collection>(`/api/collections/${encodeURIComponent(id)}/status`,{method:'POST',body:JSON.stringify({status})}),
+ setCollectionItemDecision:(id:string,itemId:string,decision:'ACCEPTED'|'REJECTED')=>request<CollectionItem>(`/api/collections/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}/decision`,{method:'POST',body:JSON.stringify({decision})}),
+ getCollectionPublic:(slug:string)=>request<CollectionPublic>(`/api/collections/by-slug/${encodeURIComponent(slug)}`),
+ submitCollectionItem:(slug:string,data:{payeeName:string;payeeWallet:string;tokenSymbol:string;amount:string;note?:string})=>request<{ok:boolean;id:string}>(`/api/collections/by-slug/${encodeURIComponent(slug)}/items`,{method:'POST',body:JSON.stringify(data)}),
 };
 // Local-currency display for Celo stablecoins. Mirrors the backend token
 // registry (src/celo/tokens.ts) so money() can stay synchronous. wFIAT

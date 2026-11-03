@@ -16,6 +16,7 @@ export const Download=(p:P)=><I {...p}><path d="M12 4v11M8 11l4 4 4-4M5 20h14"/>
 export const Home=(p:P)=><I {...p}><path d="m4 11 8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-8Z"/></I>;
 export const User=(p:P)=><I {...p}><circle cx="12" cy="8" r="3"/><path d="M5 20a7 7 0 0 1 14 0"/></I>;
 export const Activity=(p:P)=><I {...p}><path d="M4 12h3l2-5 4 10 2-5h5"/></I>;
+export const Users=(p:P)=><I {...p}><path d="M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19"/><circle cx="10" cy="7.5" r="3"/><path d="M20 19v-1.5a3.5 3.5 0 0 0-2.6-3.4M15.5 4.6a3 3 0 0 1 0 5.8"/></I>;
 export const Settings=(p:P)=><I {...p}><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M4 12H3M21 12h-1M12 4V3M12 21v-1M5.6 5.6 4.9 4.9M19.1 19.1l-.7-.7M18.4 5.6l.7-.7M4.9 19.1l.7-.7"/></I>;
 export const Spark=(p:P)=><I {...p}><path d="m12 3 1.3 5.7L19 10l-5.7 1.3L12 17l-1.3-5.7L5 10l5.7-1.3L12 3Z"/></I>;
 export const LinkIcon=(p:P)=><I {...p}><path d="M10 13.5 14 10M7.5 16H6a3 3 0 0 1 0-6h3M16.5 8H18a3 3 0 0 1 0 6h-3"/></I>;

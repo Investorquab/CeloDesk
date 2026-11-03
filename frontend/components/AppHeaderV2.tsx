@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {Home,Receipt,Plus,Activity,User} from './Icons';
+import {Home,Receipt,Plus,Activity,User,Users} from './Icons';
 import WalletConnect from './WalletConnect';
 import {useTheme} from '../lib/theme';
 import s from './AppShell.module.css';
@@ -14,6 +14,7 @@ export default function AppHeaderV2({merchantId,businessName}:{merchantId:string
   {label:'Home',href:`/dashboard${q}`,icon:Home,on:pathname==='/dashboard'},
   {label:'Invoices',href:`/dashboard/invoices${q}`,icon:Receipt,on:pathname.startsWith('/dashboard/invoices')},
   {label:'Create',href:`/dashboard/create${q}`,icon:Plus,on:pathname.startsWith('/dashboard/create')},
+  {label:'Batch Pay',href:`/dashboard/batch${q}`,icon:Users,on:pathname.startsWith('/dashboard/batch')},
   {label:'Activity',href:`/dashboard/activity${q}`,icon:Activity,on:pathname.startsWith('/dashboard/activity')},
   {label:'Profile',href:`/dashboard/profile${q}`,icon:User,on:pathname.startsWith('/dashboard/profile')},
  ];
