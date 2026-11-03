@@ -169,12 +169,20 @@ function formatInvoice(invoice: any, detailed = false): string {
 
 function formatMcpResult(toolName: string, result: any): string {
   if (toolName === 'create_invoice') {
+    let deliveryLine: string;
+    if (result?.emailSent) {
+      deliveryLine = `📧 Emailed directly to **${result.clientEmail}** — CeloDesk delivered it, so there is no need to forward anything.`;
+    } else if (result?.clientEmail && result?.emailError) {
+      deliveryLine = `⚠️ Could not email **${result.clientEmail}** (${result.emailError}). Check the address or email configuration.`;
+    } else {
+      deliveryLine = '💡 No client email was given, so the invoice was not delivered. Add the client email to have CeloDesk email it directly to the client.';
+    }
     return [
       '🎉 **Invoice created successfully**',
       '',
       formatInvoice(result, true),
       '',
-      '💡 Share the payment link with your client to collect payment.',
+      deliveryLine,
     ].join('\n');
   }
 
@@ -265,9 +273,21 @@ function createServer() {
     {
       title: 'Create CeloDesk Invoice',
       description:
-        'Create a real CeloDesk invoice for the authenticated merchant. Returns the public payment URL and invoice details.',
+        'Create a real CeloDesk invoice for the authenticated merchant AND deliver it to the client. ' +
+        'Provide the client email so CeloDesk emails the invoice straight to the client (the merchant does not forward anything). ' +
+        'Ask for the client email if it is missing. A client Telegram @username is optional. Returns the invoice details and delivery result.',
       inputSchema: z.object({
         clientName: z.string().min(1).max(120),
+        clientEmail: z
+          .string()
+          .email()
+          .optional()
+          .describe("The client's email address. CeloDesk emails the invoice directly to this address."),
+        clientTelegram: z
+          .string()
+          .max(64)
+          .optional()
+          .describe('Optional client Telegram @username, e.g. @joana. Used when the client already uses the CeloDesk bot.'),
         clientContact: z.string().max(200).optional(),
         amount: z.union([
           z.number().positive(),
@@ -289,6 +309,8 @@ function createServer() {
     },
     async ({
       clientName,
+      clientEmail,
+      clientTelegram,
       clientContact,
       amount,
       tokenSymbol,
@@ -301,6 +323,10 @@ function createServer() {
           body: JSON.stringify({
             merchantId: currentMerchantId(),
             clientName,
+            clientEmail: clientEmail || undefined,
+            clientTelegram: clientTelegram || undefined,
+            deliverEmail: !!clientEmail,
+            deliverTelegram: !!clientTelegram,
             clientContact: clientContact || undefined,
             amount: String(amount),
             tokenSymbol,
@@ -309,6 +335,7 @@ function createServer() {
           }),
         });
 
+        const emailDelivery = result?.delivery?.email;
         return {
           content: [
             {
@@ -323,6 +350,12 @@ function createServer() {
                 tokenSymbol,
                 description,
                 dueDate: dueDate || null,
+                clientEmail: clientEmail || null,
+                emailSent: !!(emailDelivery && emailDelivery.ok),
+                emailError:
+                  emailDelivery && emailDelivery.attempted && !emailDelivery.ok
+                    ? emailDelivery.error || 'failed'
+                    : null,
               }),
             },
           ],
