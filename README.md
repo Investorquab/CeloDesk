@@ -1,307 +1,179 @@
 # CeloDesk
 
-> **Ask for payment. Get paid. Know when it's paid.**
+> **The stablecoin payment desk that works like an agent.**
+> Ask for payment in plain language. Get paid directly on Celo. Know it's paid — because it was verified on-chain.
 
-CeloDesk is an AI-powered payment desk for businesses, freelancers, and creators using stablecoins on Celo.
+CeloDesk is an AI-native payments agent for freelancers, small businesses and creators on **Celo**. A merchant works with CeloDesk from **the web, Telegram, or any MCP client (e.g. Claude)** to create an invoice, share a pay-by-link page, receive a direct wallet payment, **verify that payment on-chain**, and track who still owes them — in US-dollar stablecoins, in **Ripio wFIAT local currencies** (wBRL, wARS…), or over the **x402 / USA₮** corridor. It also pays many people at once with **Batch Pay**, a single on-chain payout to independent wallets.
 
-It lets a merchant **create an invoice, share it, receive a direct wallet payment, verify that payment on-chain, and track the result** — from the web, Telegram, or an external AI assistant such as Claude.
-
-## 🚀 Try CeloDesk
-
-### 🌐 Live app
-
-**[Open CeloDesk →](https://celodesk.xyz)**
-
-Create an invoice, share it, and open the customer payment page.
-
-### 💬 Telegram
-
-**[Open CeloDesk on Telegram →](https://t.me/celoagentbot)**
-
-Talk to CeloDesk in plain English.
-
-Try:
-
-> Create an invoice for Moji for 0.01 USDT for a design job.
-
-> Who still owes me?
-
-> Show me my payment summary.
-
-### 🤖 Claude / MCP
-
-**[Open the CeloDesk MCP endpoint →](https://mcp.celodesk.xyz/mcp)**
-
-CeloDesk can be connected to a supported MCP client so an AI assistant can work with real CeloDesk invoices and payment data.
-
-### 📦 Source code
-
-**[View the GitHub repository →](https://github.com/Investorquab/CeloDesk)**
+CeloDesk is non-custodial: it never holds a customer's funds or keys.
 
 ---
 
-## 💡 What problem does CeloDesk solve?
+## Try it in 60 seconds
 
-Receiving crypto payments can become messy:
+| | Link | What to do |
+|---|---|---|
+| 🌐 **Live app** | **https://celodesk.xyz** | Create an invoice, share it, open the customer pay page |
+| 💬 **Telegram** | **https://t.me/celoagentbot** | *"Create an invoice for Moji for 0.01 USDT"* · *"Who owes me?"* · *"Create a batch pay"* |
+| 🤖 **MCP endpoint** | **https://mcp.celodesk.xyz/mcp** | Connect from Claude / any MCP client and work with real invoices and batches |
+| 🪪 **ERC-8004 agent card** | **https://celodesk.xyz/.well-known/agent-card.json** | The agent's on-chain identity document |
+| 📦 **Source** | **https://github.com/Investorquab/CeloDesk** | Full monorepo (frontend, backend, agent, mcp) |
+| ⛓️ **On-chain proof** | **[docs/PROOF.md](docs/PROOF.md)** | Every claim below, with Celoscan tx hashes |
 
-- sharing wallet addresses
-- creating payment requests
-- sending invoice details
-- checking whether someone actually paid
-- tracking who still owes money
-- switching between different tools to manage everything
-
-CeloDesk brings that workflow into one place.
-
-### The simple idea
-
-**Create → Share → Pay → Verify → Track**
-
-A business does not need to become a blockchain expert just to get paid in stablecoins.
+> **A judge can verify the whole story from the links above:** open the agent card, follow the tx hashes in [docs/PROOF.md](docs/PROOF.md) on Celoscan, and decode the attribution tag with `npm run verify-tag -- <txHash>`.
 
 ---
 
-## ✨ What we built
+## The problem
 
-### 🧾 AI-powered invoicing
+Getting paid in crypto is still a mess of loose parts: sharing raw wallet addresses, assembling a payment request, chasing whether someone actually paid, reconciling the on-chain transfer to the right invoice, and tracking who still owes you — across several disconnected tools. And when the people on either side don't price their work in US dollars, every invoice adds a layer of mental FX and double conversion spread.
 
-A merchant can tell CeloDesk what they want in normal language.
+**CeloDesk collapses that into one agent:** `Create → Share → Pay → Verify → Track`, in the currency that actually fits the user — reachable from the web, a Telegram chat, or an AI assistant, all backed by the same verified payment ledger.
 
-For example:
+---
 
-> “Create an invoice for David for 5 USDT for website design.”
+## What we built
 
-CeloDesk creates the real invoice.
+### 🧾 AI-native invoicing
+Tell CeloDesk what you want in natural language — *"Invoice David 5 USDT for website design"* or *"invoice 500 reais to João"* — and it creates a real invoice and delivers it to the client by email (and optionally Telegram). The merchant never has to forward a link themselves.
 
-### 💳 Direct wallet payments
-
-Customers pay directly to the merchant's receiving wallet.
-
-The customer checkout includes a **direct payment QR**. Scanning it with a compatible wallet prepares the token payment for the merchant.
-
-**The QR is a payment request — it is not an invoice-website redirect.**
+### 💳 Direct, non-custodial wallet payments
+Customers pay straight to the merchant's receiving wallet from a public checkout with a direct-payment QR. CeloDesk never touches the funds.
 
 ### ⛓️ On-chain payment verification
+CeloDesk does not trust a screenshot or an "I paid" message. The backend checks the actual Celo transaction — success, correct network, expected token, merchant wallet, required amount, confirmation, and duplicate-payment protection — before an invoice is marked **PAID**. The AI can *read* that status but can never *declare* it.
 
-CeloDesk does not simply trust a screenshot or a message saying “I paid.”
+### 👥 Batch Pay — pay many independent people in one transaction
+An organizer creates a Batch, shares one link, and each payee submits **their own** wallet, amount and token (so they are genuinely independent parties). The organizer approves the legitimate ones — and can reject one with a reason that is **emailed to the payee so they can fix and resubmit** — then pays everyone at once in a **single tagged `disperseToken` transaction** via the verified Disperse contract on Celo mainnet. Available in the web app, Telegram and MCP.
 
-It checks the actual transaction on Celo before recording the payment as verified.
+### 🪪 A real on-chain agent identity (ERC-8004)
+CeloDesk's agent holds **ERC-8004 identity #9799** on Celo's official Identity Registry, pointing at a live agent card (web, MCP and A2A endpoints, `x402Support: true`). See [On-chain proof](#on-chain-proof).
 
-### 🤖 AI access
-
-The same payment desk can be controlled through:
-
-**Web → Telegram → Claude**
-
-These are different interfaces connected to the same CeloDesk backend and payment records.
-
-### 💬 Telegram
-
-A merchant can create invoices and check payment activity directly from Telegram.
-
-### 🌍 Celo
-
-Celo Mainnet is used for payment settlement and verification.
+### 🌍 One agent, three surfaces
+The web dashboard, the Telegram bot (`@celoagentbot`) and the MCP server are three front-ends over the **same backend and the same payment records** — not three separate demos. A payment made on the web is immediately visible to Claude and Telegram.
 
 ---
 
-## 🔥 The part we actually proved
+## On-chain proof
 
-We tested the important payment loop with a real direct QR payment:
+All on **Celo Mainnet (chain 42220)**. Attribution tag: **`celo_3fce81a170fc`**. Agent wallet: **`0x00d1E86040d88397F4eB187c38dC527F6659e486`**.
+Full details and explorer links in **[docs/PROOF.md](docs/PROOF.md)**.
 
-**QR scan → wallet prepares payment → customer confirms → payment reaches merchant wallet → CeloDesk detects the transfer → invoice becomes PAID → Claude reads the updated PAID status.**
+| Check | Evidence |
+|---|---|
+| **ERC-8004 identity** registered from the agent wallet | Identity **#9799** on registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`; card re-pointed to the `celodesk.xyz` domain. Tx [`0x94d27a1…`](https://celoscan.io/tx/0x94d27a1c3bf5531246e853c57c9029d7e7a786c98adbd45ee22941b029be70c4) and [`0x1c61874…`](https://celoscan.io/tx/0x1c6187465f629089cfda100d07ce5aeeeaf44aa097b6b280eb6b912c374173f4) |
+| **Tagged transaction from the agent wallet** (in the event window) | Both ERC-8004 txs above carry `celo_3fce81a170fc` in their calldata — satisfied in the same transactions as the identity check |
+| **Real settlement between independent parties** | Batch Pay paid **3 independent payee wallets** in one tagged `disperseToken` tx via Disperse `0xD152f549545093347A162Dce210e7293f1452150`: [`0x637834a…`](https://celoscan.io/tx/0x637834a666c64db86c0c0ca18b93d4440d05eeb4dbdfc1d30c433a7c0b2f139f) |
 
-Telegram can also read the same payment state.
-
-That means the product is not just three interfaces placed beside each other. The interfaces connect to the same underlying payment system.
-
----
-
-## 🧩 How it works
-
-Merchant side:
-
-**Merchant → Web / Telegram / Claude → CeloDesk API → Invoice & payment records → Payment verification → Celo Mainnet**
-
-Customer side:
-
-**Public invoice → Direct payment QR / wallet → Celo transaction → CeloDesk verification → PAID → Merchant**
+Verify any of them yourself: `npm run verify-tag -- <txHash>` decodes the attribution tag straight from the transaction's calldata.
 
 ---
 
-## 🔐 Why the payment status can be trusted
+## Track 1 — Local currencies for LatAm (Ripio wFIAT)
 
-The important rule is simple:
+**Who it serves.** A freelancer in São Paulo, a designer in Buenos Aires, a shop in Bogotá. They price their work in reais, pesos or soles; their clients and costs are in those currencies. Being paid in a US-dollar stablecoin forces mental FX on every invoice and pays conversion spread twice.
 
-> **CeloDesk only treats a payment as PAID after the backend verifies the on-chain payment.**
+**Why local currency matters.** When the invoice, the payment and the record are all in the merchant's own currency, there is nothing to convert and nothing to reconcile against a moving rate. The amount the client sees is the amount the merchant quoted — down to the centavo.
 
-The verification process checks the relevant transaction details, including:
-
-- successful transaction
-- Celo network
-- expected token
-- merchant receiving wallet
-- required amount
-- confirmation state
-- duplicate-payment protection
-
-For direct QR payments, CeloDesk also reconciles the on-chain token transfer with the appropriate outstanding invoice.
-
-CeloDesk does **not** custody the customer's funds.
-
----
-
-## 🪙 Supported payment tokens
-
-The current verified invoice/payment flow supports:
-
-- **USDT**
-- **USDC**
-- **USDm**
-- **NGNm**
-
-Payments settle on **Celo Mainnet (chain ID 42220)**.
-
----
-
-## 🤖 What the AI can do
-
-CeloDesk's AI interfaces can perform real payment-management operations such as:
-
-- 🧾 Create invoices
-- 🔎 Check invoice status
-- 📋 List invoices
-- 💰 View payment summaries
-- 👤 View merchant profile
-- 🔗 Retrieve invoice/payment information
-
-The AI does not get to simply declare an invoice paid. The payment state comes from the CeloDesk backend and its verification layer.
-
----
-
-## Track 1: Local currencies for LatAm (Ripio wFIAT)
-
-**Who it serves.** A freelancer in Sao Paulo, a designer in Buenos Aires, a small shop in Bogota. They price their work in reais, pesos or soles, their clients think in those currencies, and their costs are in those currencies. Being paid in a US dollar stablecoin forces everyone to do mental FX on every invoice and absorb conversion spread twice.
-
-**Why local currency matters.** When the invoice, the payment and the record are all in the merchant's own currency, there is nothing to convert and nothing to reconcile against a moving exchange rate. The amount a client sees is the amount the merchant quoted, down to the centavo.
-
-**What CeloDesk does.** Merchants can invoice and settle in **Ripio wFIAT** stablecoins, each pegged to a local currency and issued natively on Celo:
+**What CeloDesk does.** Merchants invoice and settle in **Ripio wFIAT** stablecoins, each pegged to a local currency and issued natively on Celo:
 
 | Token | Currency | Example display |
 |-------|----------|-----------------|
-| wBRL  | Brazilian real    | R$ 1.500,00 |
-| wARS  | Argentine peso     | $ 25.000,00 |
-| wMXN  | Mexican peso       | $349.50 |
-| wCOP  | Colombian peso     | COP amounts |
-| wCLP  | Chilean peso       | CLP amounts |
-| wPEN  | Peruvian sol       | S/ amounts |
+| wBRL | Brazilian real | R$ 1.500,00 |
+| wARS | Argentine peso | $ 25.000,00 |
+| wMXN | Mexican peso | $ 349.50 |
+| wCOP | Colombian peso | COP 1.200.000 |
+| wCLP | Chilean peso | CLP 90.000 |
+| wPEN | Peruvian sol | S/ 350.00 |
 
-All six are 18-decimal ERC-20s whose addresses were taken from the [Celo stablecoin contracts reference](https://docs.celo.org/build/tools/contracts/stablecoin-contracts) and verified on-chain before being added to the registry (`backend/src/celo/tokens.ts`).
-
-Local currency is threaded through every surface:
-
-- **Web app** — amounts render in the token's own currency (for example `R$ 1.500,00 wBRL`) on the checkout page, dashboard and activity feed.
-- **Telegram** — the invoice card and the assistant speak the local currency; a merchant can say "invoice 500 reais to Joao" and get a wBRL invoice.
-- **MCP / Claude** — the same tokens are available to external assistants, validated against the verified registry.
-- **"Who owes me" and summaries** are reported per currency and never summed across currencies, because wBRL, wARS and USDC are not interchangeable one-to-one.
+Addresses were taken from the [Celo stablecoin contracts reference](https://docs.celo.org/build/tools/contracts/stablecoin-contracts) and verified on-chain before being added to the registry (`backend/src/celo/tokens.ts`). Local currency is threaded through **every** surface: the web checkout/dashboard/activity render each token in its own currency (e.g. `R$ 1.500,00 wBRL`); the Telegram card and assistant speak it; MCP exposes the same tokens; and "who owes me" totals are reported **per currency**, never summed across currencies.
 
 ---
 
-## Track 2: Open corridors with USA₮ over x402
+## Track 2 — Open corridors with USA₮ over x402
 
-**Who it serves.** Cross-border settlement between independent parties, including machine-to-machine and agent-to-agent payments, where a US dollar settlement asset is the right unit of account and gas should not be the payer's problem.
+**Who it serves.** Cross-border settlement between independent parties — including machine-to-machine and agent-to-agent payments — where a US-dollar settlement asset is the right unit of account and gas should not be the payer's problem.
 
-**Why USA₮ and x402.** USA₮ (Tether America USD, issued by Anchorage Digital Bank) is a US-regulated dollar stablecoin on Celo, settled through the hosted **x402 facilitator** with the gasless **EIP-3009 `transferWithAuthorization`** scheme: the payer signs an authorization off-chain, the facilitator submits it on-chain and pays the gas, and funds move payer to merchant directly. Nobody custodies the payment, and the payer needs no CELO for gas.
+**Why USA₮ and x402.** **USA₮** (Tether America USD) is a US-regulated dollar stablecoin on Celo, settled through the hosted **x402 facilitator** using the gasless **EIP-3009 `transferWithAuthorization`** scheme: the payer signs an authorization off-chain, the facilitator submits it and pays gas, funds move payer→merchant directly, and nobody custodies them. The payer needs no CELO.
 
-**What CeloDesk does.** A merchant issues a USA₮ invoice; a paying agent can settle it over x402:
+**What CeloDesk does.** A merchant issues a USA₮ invoice; a paying agent settles it over x402:
 
-1. `GET /api/x402/invoices/:id/requirements` returns the x402 payment requirements (payTo = merchant wallet, asset = USA₮, amount in atomic units).
+1. `GET /api/x402/invoices/:id/requirements` → the x402 payment requirements (payTo = merchant wallet, asset = USA₮, atomic amount).
 2. The payer signs an EIP-3009 authorization and POSTs the x402 payload to `/api/x402/invoices/:id/pay`.
 3. CeloDesk calls the facilitator `/verify`, then `/settle`, records the payment, and marks the invoice paid.
 
-The buyer side is demonstrated by `backend/scripts/x402-pay.ts` (`npm run x402-pay -- <invoiceId>`), which signs and submits as an independent payer.
+The buyer side is demonstrated by `backend/scripts/x402-pay.ts` (`npm run x402-pay -- <invoiceId>`), signing as an independent payer. The facilitator is `https://api.x402.celo.org` (mainnet), confirmed to settle USA₮ via `GET /supported`.
 
-The facilitator is `https://api.x402.celo.org` (mainnet), confirmed to settle USA₮ via `GET /supported`. Settlement is gas at cost plus 0.3%, with a free-credit allowance.
-
-**Attribution note.** x402 settlements through the hosted facilitator cannot carry an attribution tag. For this lane the organisers record the merchant **PayTo wallet** (the invoice receiving wallet) instead. CeloDesk's agent-wallet attribution requirement is satisfied separately by a tagged transaction from the agent wallet (see the ERC-8004 section).
+**Attribution note.** x402 settlements through the hosted facilitator cannot carry an attribution tag; for this lane the organisers record the merchant **PayTo wallet** (the invoice's receiving wallet) instead. CeloDesk's agent-wallet attribution requirement is met separately by the tagged ERC-8004 transactions above.
 
 ---
 
-## 🧪 Current product status
+## Track 2 (extended) — Textile FX corridor  ·  *in progress*
 
-### Working and tested
+> **Status: planned / in progress — not yet live in the product.** We are honest about this: there is no shipped Textile FX code in this repo yet, and nothing in the UI claims otherwise.
 
-- ✅ Live web application
-- ✅ Invoice creation
-- ✅ Public customer checkout
-- ✅ Direct payment QR
-- ✅ Compatible-wallet payment flow
-- ✅ Celo on-chain payment detection
-- ✅ Payment reconciliation to PAID
-- ✅ Claude / MCP access
-- ✅ Telegram agent
-- ✅ Shared payment state across interfaces
-- ✅ Production backend, agent, and MCP services
-- ✅ Production frontend deployment
-
-### Not claimed as complete
-
-- ⏳ MiniPay-specific QR/deep-link testing requires the approved MiniPay developer testing environment.
-
-The current QR is therefore described as a **compatible-wallet payment QR**, not a universal MiniPay QR.
+[Textile FX](https://fx-docs.textilecredit.com) is an instant, on-chain FX rail that swaps non-USD stablecoins ↔ USD stablecoins by request-for-quote. On Celo its live corridors include **wARS↔USDT** and **wBRL↔USDT** — a natural fit for CeloDesk, which already handles wBRL/wARS. The planned lane lets a merchant **receive a local-currency (wFIAT) payment and convert it to USDT in a single quoted swap** through Textile's `LimitOrderReactor`, closing the loop between local-currency invoicing (Track 1) and a dollar-settled corridor. We will ship this only if it genuinely settles against a live maker quote, and record the proof in [docs/PROOF.md](docs/PROOF.md).
 
 ---
 
-## 🔗 Important links
+## Supported tokens
 
-| Resource | Open |
-|---|---|
-| 🌐 **CeloDesk** | **[Live app](https://celodesk.xyz)** |
-| 💬 **Telegram** | **[Open bot](https://t.me/celoagentbot)** |
-| 🤖 **MCP** | **[Open endpoint](https://mcp.celodesk.xyz/mcp)** |
-| 📦 **GitHub** | **[View source](https://github.com/Investorquab/CeloDesk)** |
-| ⛓️ **Celo** | **[Celo mainnet explorer](https://celoscan.io/)** |
-| 📚 **Demo guide** | **[End-to-end demo](docs/DEMO.md)** |
-| 🏗️ **Technical overview** | **[Architecture](docs/ARCHITECTURE.md)** |
+The verified registry (`backend/src/celo/tokens.ts`) covers **11 tokens** on **Celo Mainnet (42220)**:
+
+- **US-dollar stablecoins:** USDm, USDC, USDT, **USA₮**
+- **Ripio wFIAT (LatAm):** wBRL, wARS, wMXN, wCOP, wCLP, wPEN
+- **Mento local:** NGNm
+
+Every token symbol, address and decimal count is validated against this single registry on every surface, so the lists can never drift.
 
 ---
 
-## 🎥 Recommended demo
+## How it works
 
-The strongest product demonstration is one real payment:
+**Merchant side**
+`Merchant → Web / Telegram / MCP (Claude) → CeloDesk API → Invoice & payment records → On-chain verification → Celo Mainnet`
 
-1. Create an invoice.
-2. Open the public payment page.
-3. Scan the direct payment QR.
-4. Confirm the wallet payment.
-5. Show the transaction on Celo.
-6. Show CeloDesk changing the invoice to **PAID**.
-7. Ask Claude to check the invoice.
-8. Ask Telegram to show the same payment state.
+**Customer side**
+`Public pay page → Direct QR / wallet (or x402 authorization) → Celo transaction → CeloDesk verification → PAID → Merchant`
 
-See **[docs/DEMO.md](docs/DEMO.md)** for the short demonstration guide.
+**Batch Pay**
+`Organizer creates a batch → shares one link → payees self-submit wallet+amount+token → organizer approves/rejects → one tagged disperseToken tx pays everyone`
+
+The important invariant: **a payment is PAID only after the backend verifies it on-chain** — the AI layer can read state but never writes "paid".
 
 ---
 
-## 🛠️ For developers
+## Built before vs. during *Agents on Open Rails*
 
-The repository contains four main application areas:
+CeloDesk's core invoicing existed before the hackathon kicked off (6 Oct 2026). Everything in this section was built **during** the event, in new, clearly described commits:
+
+**Already existed (before):** core invoice create/share/verify/track, the public checkout, direct-QR payments, and the three interfaces (web, Telegram, MCP) over one backend.
+
+**Built during the hackathon:**
+- Migrated attribution to the official `@celo/attribution-tags` SDK and the **`celo_3fce81a170fc`** tag, with a startup integrity assert and a `verify-tag` decoder.
+- **Track 1:** Ripio wFIAT (wBRL/wARS/wMXN/wCOP/wCLP/wPEN) across backend, web, Telegram and MCP, with per-currency formatting.
+- **Track 2:** the USA₮ / x402 settlement lane (facilitator client, `/api/x402` routes, EIP-3009 buyer demo).
+- **ERC-8004:** re-registered the agent identity (#9799) to a real CeloDesk card and re-pointed it to the branded `celodesk.xyz` / `mcp.celodesk.xyz` domains.
+- **Batch Pay:** data model, supervisor UI, public submission page, one-transaction Disperse payout, reject-with-reason + payee email, and `create_batch`/`list_batches`/`get_batch` in Telegram and MCP.
+- Moved the whole stack onto the branded `celodesk.xyz` domain and deployed backend, frontend, bot and MCP.
+
+---
+
+## For developers
 
 | Folder | Purpose |
 |---|---|
-| `frontend/` | Web app, merchant dashboard and customer checkout |
-| `backend/` | API, invoice logic and payment verification |
-| `agent/` | Telegram agent |
+| `frontend/` | Next.js web app — merchant dashboard, checkout, Batch Pay |
+| `backend/` | Express API — invoice logic, on-chain verification, x402, collections, the agent tool registry |
+| `agent/` | Telegram bot (forwards to the backend agent) |
 | `mcp/` | Remote MCP server |
 
-The project uses Next.js, React, TypeScript, Node.js, Express, PostgreSQL, Prisma, Celo, Groq, Telegram, and MCP.
+Stack: Next.js · React · TypeScript · Node.js · Express · PostgreSQL · Prisma · Celo · Groq · Telegram · MCP.
 
-Local development requires Node.js, PostgreSQL, a Celo RPC endpoint, and the relevant API/bot credentials.
-
-Never commit real secrets such as database credentials, API keys, Telegram tokens, JWT secrets, or private keys.
+Local dev needs Node.js 20.19+ (22 recommended), PostgreSQL, a Celo RPC endpoint, and the relevant API/bot credentials. **Never commit secrets** (database URLs, API keys, Telegram tokens, JWT secrets, private keys). See **[docs/DEMO.md](docs/DEMO.md)** for an end-to-end walkthrough and **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the technical overview.
 
 ---
 
-## 🏁 In one sentence
+## In one sentence
 
-**CeloDesk turns stablecoin payments into a simple business workflow: create an invoice, get paid directly, verify the payment on Celo, and manage everything from the web, Telegram, or AI.**
+**CeloDesk turns stablecoin payments into a simple business workflow — create an invoice, get paid directly, verify it on Celo, and manage everything from the web, Telegram or an AI assistant — in dollars, in local currency, across corridors, and to many people at once.**
