@@ -167,11 +167,11 @@ async function sendInvoiceArtifact(ctx: any, artifact: any) {
     await ctx.replyWithPhoto(Input.fromBuffer(image), {
       caption,
       parse_mode: 'HTML',
-      ...Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]),
+      ...Markup.inlineKeyboard([[Markup.button.url("👁 Preview the client's invoice", invoice.publicUrl)]]),
     });
   } catch (err) {
     console.error('Telegram invoice card render failed:', err);
-    await ctx.reply(`✅ <b>Invoice created</b>\n${caption}`, { parse_mode: 'HTML', ...Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]) });
+    await ctx.reply(`✅ <b>Invoice created</b>\n${caption}`, { parse_mode: 'HTML', ...Markup.inlineKeyboard([[Markup.button.url("👁 Preview the client's invoice", invoice.publicUrl)]]) });
   }
 
   // 3. A Telegram @username was given but the client has not used the bot yet,
@@ -308,12 +308,15 @@ async function askAgent(ctx: any, text: string) {
 
     if (recentInvoicesArtifact) {
       await sendRecentInvoices(ctx, recentInvoicesArtifact);
+    } else if (invoiceArtifact) {
+      // Invoice created: the card (with its "emailed to client" caption) is the
+      // whole reply. Do not also send the model's free text, which tends to
+      // echo the client pay link back to the merchant as "view it here".
+      await sendInvoiceArtifact(ctx, invoiceArtifact);
     } else {
       const formatted = formatArtifactReply(displayArtifact) || formatGenericTelegramReply(reply);
       await sendTelegramText(ctx, formatted);
     }
-
-    if (invoiceArtifact) await sendInvoiceArtifact(ctx, invoiceArtifact);
   } catch (err: any) {
     console.error('CeloDesk Telegram agent error:', err);
     await sendTelegramText(ctx, '⚠️ <b>CeloDesk is temporarily busy</b>\n\nPlease try again in a few seconds.');
