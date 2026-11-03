@@ -560,6 +560,7 @@ const nodeHandler = toNodeHandler(handler);
 app.use(
   '/mcp',
   hostHeaderValidation([
+    'mcp.celodesk.xyz',
     'mcp.185-7-81-139.sslip.io',
     '127.0.0.1',
     'localhost',
@@ -569,6 +570,7 @@ app.use(
 app.use(
   '/mcp',
   originValidation([
+    'mcp.celodesk.xyz',
     'mcp.185-7-81-139.sslip.io',
   ]),
 );

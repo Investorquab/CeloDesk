@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
-const BASE_URL = 'https://mcp.185-7-81-139.sslip.io';
+const BASE_URL = 'https://mcp.celodesk.xyz';
 const RESOURCE_URL = `${BASE_URL}/mcp`;
 
 const BACKEND_API_URL =
