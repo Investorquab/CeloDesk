@@ -77,10 +77,11 @@ export default function PayLinkClient({slug}: {slug: string}) {
   }
 
   const fieldStyle: React.CSSProperties = {
-    width: '100%', padding: '12px 13px', borderRadius: 12, border: '1px solid rgba(10,40,30,.14)',
-    outline: 'none', fontSize: 15, marginTop: 6, boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff',
+    width: '100%', padding: '12px 13px', borderRadius: 10, border: '1px solid var(--line)',
+    outline: 'none', fontSize: 15, marginTop: 6, boxSizing: 'border-box', fontFamily: 'inherit',
+    background: 'var(--raised)', color: 'var(--text)',
   };
-  const labelStyle: React.CSSProperties = {display: 'block', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#4a6a5e', marginTop: 14};
+  const labelStyle: React.CSSProperties = {display: 'block', textAlign: 'left', fontSize: 13, fontWeight: 500, color: 'var(--text-2)', marginTop: 14};
 
   return (
     <main className={styles.page}>
@@ -106,12 +107,12 @@ export default function PayLinkClient({slug}: {slug: string}) {
                 onChange={(e) => setPayer(e.target.value)} maxLength={80} />
             </label>
 
-            {err && <p style={{color: 'var(--danger,#c0392b)', fontSize: 13, marginTop: 12, marginBottom: 0}}>{err}</p>}
+            {err && <p style={{color: 'var(--neg,#c0392b)', fontSize: 13, marginTop: 12, marginBottom: 0}}>{err}</p>}
 
             <button className={`${styles.btn} ${styles.btnGreen}`} style={{marginTop: 18, width: '100%'}} onClick={pay} disabled={busy}>
               {busy ? 'Starting…' : 'Continue to pay'}
             </button>
-            <p style={{fontSize: 11, color: '#6c8a7e', marginTop: 12, marginBottom: 0}}>Settles on Celo directly to the seller. Non-custodial.</p>
+            <p style={{fontSize: 11, color: 'var(--text-2)', marginTop: 12, marginBottom: 0}}>Settles on Celo directly to the seller. Non-custodial.</p>
           </>
         )}
       </div>

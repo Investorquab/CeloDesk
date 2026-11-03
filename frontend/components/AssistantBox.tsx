@@ -169,10 +169,10 @@ export default function AssistantBox({ merchantId, onInvoiceCreated }: { merchan
 
   return (
     <>
-      <section className="assistantBox">
-        <div className="assistantTop">
-          <div className="assistantIcon"><Spark size={18} /></div>
-          <div><strong>CeloDesk AI</strong><div className="muted">Your payment desk. Ask me to create, track, or check.</div></div>
+      <section className="aiBox">
+        <div className="aiTop">
+          <div className="aiIcon"><Spark size={18} /></div>
+          <div><strong>CeloDesk AI</strong><div className="aiSub">Your payment desk. Ask me to create, track, or check.</div></div>
           {busy && <Clock size={15} />}
         </div>
 
@@ -224,7 +224,7 @@ export default function AssistantBox({ merchantId, onInvoiceCreated }: { merchan
           </div>
         )}
 
-        <div className="assistantInput">
+        <div className="aiInput">
           <input
             value={text}
             onChange={(event) => setText(event.target.value)}
@@ -234,12 +234,12 @@ export default function AssistantBox({ merchantId, onInvoiceCreated }: { merchan
             inputMode="text"
             autoComplete="off"
           />
-          <button className="btn btnBrand" onClick={() => void run()} disabled={busy || !text.trim()} aria-label="Send message">
+          <button className="aiSend" onClick={() => void run()} disabled={busy || !text.trim()} aria-label="Send message">
             {busy ? <Clock size={16} /> : <ArrowRight size={16} />}
           </button>
         </div>
 
-        <div className="assistantChips">
+        <div className="aiChips">
           <button onClick={() => quick('Create an invoice')}><Plus size={13} />Create invoice</button>
           <button onClick={() => quick('Who owes me?')}>Who owes me?</button>
           <Link href={`/dashboard/profile?merchantId=${encodeURIComponent(merchantId)}`}>My profile</Link>
@@ -248,27 +248,41 @@ export default function AssistantBox({ merchantId, onInvoiceCreated }: { merchan
       </section>
 
       <style jsx>{`
-        .assistantConversation{max-height:360px;overflow-y:auto;padding:2px 2px 10px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
+        .aiBox{background:var(--ck-card);border:1px solid var(--ck-line);border-radius:14px;padding:20px;margin:0 0 18px}
+        .aiTop{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+        .aiTop>div{min-width:0}
+        .aiIcon{width:38px;height:38px;border-radius:11px;background:var(--ck-accent-soft);color:var(--ck-accent);display:grid;place-items:center;flex:none}
+        .aiTop strong{font-size:14px;font-weight:600;color:var(--ck-text)}
+        .aiSub{font-size:12.5px;color:var(--ck-text2);margin-top:2px}
+        .aiInput{display:flex;gap:8px}
+        .aiInput input{flex:1;min-width:0;border:1px solid var(--ck-line);background:var(--ck-raised);color:var(--ck-text);border-radius:10px;padding:12px 13px;outline:none;font-size:15px;font-family:inherit}
+        .aiInput input::placeholder{color:var(--ck-muted)}
+        .aiInput input:focus{border-color:var(--ck-accent-line);box-shadow:0 0 0 3px var(--ck-accent-soft)}
+        .aiSend{flex:none;display:inline-grid;place-items:center;width:44px;border:none;border-radius:10px;background:var(--ck-btn-bg);color:var(--ck-btn-text);box-shadow:inset 0 1px 0 var(--ck-btn-hl);cursor:pointer;transition:transform .12s ease,background .15s ease}
+        .aiSend:hover{background:var(--ck-btn-hover)}.aiSend:active{transform:scale(.97)}.aiSend:disabled{opacity:.5;cursor:not-allowed}
+        .aiChips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+        .aiChips :global(button),.aiChips :global(a){border:1px solid var(--ck-line);background:transparent;color:var(--ck-text2);border-radius:999px;padding:7px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;font-family:inherit;transition:border-color .15s ease,color .15s ease}
+        .aiChips :global(button):hover,.aiChips :global(a):hover{border-color:var(--ck-line2);color:var(--ck-text)}
+        .assistantConversation{max-height:360px;overflow-y:auto;padding:2px 2px 10px;margin:4px 0 14px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
         .assistantMessage{display:flex;flex-direction:column;gap:5px;max-width:86%}
         .assistantMessage-user{align-self:flex-end;align-items:flex-end}
         .assistantMessage-assistant{align-self:flex-start;align-items:flex-start}
-        .assistantMessageLabel{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#8eafa3;padding:0 5px}
-        .assistantMessage-user .assistantMessageLabel{color:#9be7cf}
-        .assistantMessageBubble{padding:10px 12px;border-radius:15px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.5;color:#e3f0eb;white-space:normal;overflow-wrap:anywhere}
-        .assistantMessage-user .assistantMessageBubble{background:linear-gradient(135deg,#117e60,#0d6c53);border-color:rgba(100,235,194,.16);color:#fff;border-bottom-right-radius:5px}
-        .assistantMessage-assistant .assistantMessageBubble{border-bottom-left-radius:5px;background:rgba(255,255,255,.055)}
+        .assistantMessageLabel{font-size:10px;font-weight:500;letter-spacing:.02em;color:var(--ck-muted);padding:0 5px;font-family:var(--ck-mono)}
+        .assistantMessageBubble{padding:10px 12px;border-radius:13px;background:var(--ck-raised);border:1px solid var(--ck-line);font-size:13px;line-height:1.5;color:var(--ck-text);white-space:normal;overflow-wrap:anywhere}
+        .assistantMessage-user .assistantMessageBubble{background:var(--ck-accent-soft);border-color:var(--ck-accent-line);color:var(--ck-text);border-bottom-right-radius:5px}
+        .assistantMessage-assistant .assistantMessageBubble{border-bottom-left-radius:5px}
         .assistantMessageText{display:grid;gap:2px}.assistantMessageLine{min-height:18px}.assistantMessageSpacer{height:3px}
-        .assistantBullet{display:flex;gap:7px}.assistantBulletDot{color:#54dfb2}
-        .assistantMessageBubble code{background:rgba(0,0,0,.2);padding:1px 4px;border-radius:5px;font-size:.92em}
-        .assistantTyping{display:flex;gap:4px;align-items:center;padding:11px 13px}.assistantTyping span{width:5px;height:5px;border-radius:50%;background:#7bdcbf;animation:assistantDot 1.1s infinite ease-in-out}.assistantTyping span:nth-child(2){animation-delay:.12s}.assistantTyping span:nth-child(3){animation-delay:.24s}
+        .assistantBullet{display:flex;gap:7px}.assistantBulletDot{color:var(--ck-accent)}
+        .assistantMessageBubble code{background:rgba(127,127,127,.18);padding:1px 4px;border-radius:5px;font-size:.92em;font-family:var(--ck-mono)}
+        .assistantTyping{display:flex;gap:4px;align-items:center;padding:11px 13px}.assistantTyping span{width:5px;height:5px;border-radius:50%;background:var(--ck-text2);animation:assistantDot 1.1s infinite ease-in-out}.assistantTyping span:nth-child(2){animation-delay:.12s}.assistantTyping span:nth-child(3){animation-delay:.24s}
         @keyframes assistantDot{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-2px)}}
         .assistantTokenPicker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 4px 2px;max-width:100%}
-        .assistantTokenPicker button{border:1px solid rgba(94,220,181,.2);background:rgba(255,255,255,.055);color:#e7f5f0;border-radius:12px;padding:9px 8px;text-align:left;display:grid;gap:2px;cursor:pointer}.assistantTokenPicker button:hover{background:rgba(57,207,159,.12);border-color:rgba(94,220,181,.42)}.assistantTokenPicker strong{font-size:11px}.assistantTokenPicker span{font-size:8px;color:#93b2a7}
-        .assistantCreatedInConversation{border:1px solid rgba(100,229,192,.2);background:linear-gradient(145deg,rgba(14,108,81,.48),rgba(8,47,37,.65));border-radius:17px;padding:13px;margin:1px 2px 0;box-shadow:0 10px 28px rgba(0,0,0,.12)}
-        .assistantCreatedHeader{display:flex;align-items:center;justify-content:space-between;gap:10px}.assistantCreatedEyebrow{display:inline-flex;align-items:center;gap:5px;color:#76e5c2;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.assistantCreatedStatus{font-size:8px;font-weight:800;color:#a7cfc1;background:rgba(255,255,255,.06);border-radius:999px;padding:4px 7px}
-        .assistantCreatedBody{display:grid;gap:3px;margin:10px 0 12px}.assistantCreatedBody strong{font-family:Manrope;font-size:15px;letter-spacing:-.02em}.assistantCreatedBody b{font-family:Manrope;font-size:21px;letter-spacing:-.04em}.assistantCreatedBody span{font-size:10px;color:#a9c8bd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .assistantCreatedActions{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:7px}.assistantCreatedButton{min-width:0;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07);color:#e8f5f0;border-radius:10px;padding:8px 10px;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;text-decoration:none;white-space:nowrap}.assistantCreatedButton.copyButton{grid-column:1/-1}.assistantCreatedButton.primary{background:#19b985;border-color:#29c999;color:#06251c}.assistantCreatedButton:hover{transform:translateY(-1px)}.assistantShareState{display:block;margin-top:7px;color:#7be2c1;font-size:9px;font-weight:800}
-        @media(max-width:560px){.assistantConversation{max-height:330px;gap:12px}.assistantMessage{max-width:91%}.assistantMessageBubble{font-size:11px;padding:9px 11px}.assistantTokenPicker{grid-template-columns:repeat(2,1fr)}.assistantCreatedInConversation{padding:12px}.assistantCreatedBody b{font-size:19px}.assistantCreatedActions{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}.assistantCreatedButton{min-height:34px}.assistantInput input{font-size:16px!important;line-height:1.2}.assistantInput{position:relative}}
+        .assistantTokenPicker button{border:1px solid var(--ck-line);background:var(--ck-raised);color:var(--ck-text);border-radius:10px;padding:9px 8px;text-align:left;display:grid;gap:2px;cursor:pointer;font-family:inherit}.assistantTokenPicker button:hover{border-color:var(--ck-accent-line)}.assistantTokenPicker strong{font-size:12px}.assistantTokenPicker span{font-size:10px;color:var(--ck-muted)}
+        .assistantCreatedInConversation{border:1px solid var(--ck-line);background:var(--ck-raised);border-radius:14px;padding:14px;margin:1px 2px 0}
+        .assistantCreatedHeader{display:flex;align-items:center;justify-content:space-between;gap:10px}.assistantCreatedEyebrow{display:inline-flex;align-items:center;gap:5px;color:var(--ck-pos);font-size:11px;font-weight:500;font-family:var(--ck-mono)}.assistantCreatedStatus{font-size:10px;font-weight:500;color:var(--ck-text2);background:var(--ck-card);border:1px solid var(--ck-line);border-radius:999px;padding:3px 9px;font-family:var(--ck-mono)}
+        .assistantCreatedBody{display:grid;gap:3px;margin:10px 0 12px}.assistantCreatedBody strong{font-size:15px;font-weight:600}.assistantCreatedBody b{font-family:var(--ck-mono);font-size:20px;letter-spacing:-.02em;font-weight:500}.assistantCreatedBody span{font-size:12px;color:var(--ck-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .assistantCreatedActions{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:7px}.assistantCreatedButton{min-width:0;border:1px solid var(--ck-line2);background:transparent;color:var(--ck-text);border-radius:9px;padding:9px 10px;font-size:11px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;text-decoration:none;white-space:nowrap}.assistantCreatedButton.copyButton{grid-column:1/-1}.assistantCreatedButton.primary{background:var(--ck-btn-bg);border-color:transparent;color:var(--ck-btn-text)}.assistantCreatedButton:hover{border-color:var(--ck-text2)}.assistantShareState{display:block;margin-top:7px;color:var(--ck-pos);font-size:11px;font-weight:500}
+        @media(max-width:560px){.assistantConversation{max-height:330px;gap:12px}.assistantMessage{max-width:91%}.assistantMessageBubble{font-size:12px;padding:9px 11px}.assistantTokenPicker{grid-template-columns:repeat(2,1fr)}.assistantCreatedInConversation{padding:12px}.assistantCreatedBody b{font-size:18px}.aiInput input{font-size:16px!important;line-height:1.2}.aiInput{position:relative}}
       `}</style>
     </>
   );

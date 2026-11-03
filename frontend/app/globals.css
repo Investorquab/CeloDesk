@@ -361,3 +361,40 @@
   .invoiceDetailMeta>div,.invoiceDetailMeta>div:nth-child(2n),.invoiceDetailMeta>div:nth-child(3n){border-right:0;border-bottom:1px solid var(--line)!important}
   .invoiceDetailMeta>div:last-child{border-bottom:0!important}
 }
+
+/* ===== CeloDesk V3 ledger theme tokens (namespaced --ck-*, themed via html[data-theme]) =====
+   Shared by components that live outside the .app / .page modules (sign-in gate,
+   WalletConnect, AssistantBox). Legacy --bg/--text etc. are left untouched so the
+   not-yet-migrated pay/public pages keep their current styling. */
+:root{
+  --ck-bg:#0f1311; --ck-deep:#0b0e0c; --ck-card:#151a17; --ck-raised:#1d241f;
+  --ck-line:rgba(234,240,236,.09); --ck-line2:rgba(234,240,236,.15);
+  --ck-text:#eaf0ec; --ck-text2:#9aa7a0; --ck-muted:#7a857f;
+  --ck-accent:#e0a24a; --ck-accent-soft:rgba(224,162,74,.14); --ck-accent-line:rgba(224,162,74,.42);
+  --ck-pos:#4cc38a; --ck-pos-soft:rgba(76,195,138,.12);
+  --ck-neg:#e5767a; --ck-neg-soft:rgba(229,118,122,.12);
+  --ck-btn-bg:#eaf0ec; --ck-btn-text:#0f1311; --ck-btn-hover:#ffffff; --ck-btn-hl:rgba(255,255,255,.25);
+  --ck-shadow:0 22px 50px -26px rgba(0,0,0,.72);
+  --ck-grad:linear-gradient(180deg,#181e1a,#121715);
+  --ck-serif:"Fraunces",Georgia,serif; --ck-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+html[data-theme="light"]{
+  --ck-bg:#f4f0e7; --ck-deep:#ece6d9; --ck-card:#fbf9f3; --ck-raised:#efe9dd;
+  --ck-line:rgba(45,38,22,.11); --ck-line2:rgba(45,38,22,.18);
+  --ck-text:#262015; --ck-text2:#5f5749; --ck-muted:#867d6c;
+  --ck-accent:#a86d1e; --ck-accent-soft:rgba(168,109,30,.12); --ck-accent-line:rgba(168,109,30,.42);
+  --ck-pos:#16a34a; --ck-pos-soft:rgba(22,163,74,.1);
+  --ck-neg:#c0453f; --ck-neg-soft:rgba(192,69,63,.1);
+  --ck-btn-bg:#262015; --ck-btn-text:#f7f3ea; --ck-btn-hover:#352c1b; --ck-btn-hl:rgba(255,255,255,.08);
+  --ck-shadow:0 18px 44px -24px rgba(40,33,20,.2);
+  --ck-grad:linear-gradient(180deg,#f6f2e8,#efe9db);
+}
+/* Themed sign-in gate (overrides the earlier light rules for the gate-only classes) */
+.gate{min-height:100vh;display:grid;place-items:center;background:var(--ck-bg)!important;color:var(--ck-text);padding:20px;font-family:"Inter",system-ui,sans-serif}
+.gateCard{width:min(440px,100%);background:var(--ck-card);border:1px solid var(--ck-line);border-radius:18px;padding:34px;box-shadow:var(--ck-shadow);text-align:center;color:var(--ck-text)}
+.gateCard .brand{justify-content:center;margin-bottom:26px;color:var(--ck-text);font-family:"Inter",system-ui,sans-serif;font-weight:600;letter-spacing:-.01em}
+.gateCard h1{font-family:var(--ck-serif);font-weight:440;letter-spacing:-.02em;color:var(--ck-text);margin:0 0 8px}
+.gateCard .muted{color:var(--ck-text2)}
+.gateOr{color:var(--ck-muted)}
+.gateOr::before,.gateOr::after{background:var(--ck-line)}
+.gateSmall{color:var(--ck-muted)}

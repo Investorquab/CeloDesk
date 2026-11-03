@@ -10,29 +10,30 @@ const UPDATED = 'November 1, 2026';
 
 const wrap: React.CSSProperties = {
   minHeight: '100vh',
-  background: '#FCFCFA',
-  color: '#102019',
+  background: 'var(--ck-bg)',
+  color: 'var(--ck-text)',
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 const bar: React.CSSProperties = {
-  background: '#0A1C14',
-  color: '#fff',
+  background: 'var(--ck-deep)',
+  color: 'var(--ck-text)',
+  borderBottom: '1px solid var(--ck-line)',
   padding: '18px 24px',
   display: 'flex',
   alignItems: 'center',
   gap: 12,
 };
 const mark: React.CSSProperties = {
-  width: 30,
-  height: 30,
-  borderRadius: 9,
-  background: '#13915F',
+  width: 28,
+  height: 28,
+  borderRadius: 8,
+  background: 'var(--ck-text)',
   display: 'grid',
   placeItems: 'center',
-  color: '#fff',
-  fontFamily: "'Bricolage Grotesque', sans-serif",
-  fontWeight: 800,
-  fontSize: 16,
+  color: 'var(--ck-bg)',
+  fontFamily: 'var(--ck-serif)',
+  fontWeight: 500,
+  fontSize: 15,
 };
 const container: React.CSSProperties = {
   maxWidth: 760,
@@ -40,30 +41,32 @@ const container: React.CSSProperties = {
   padding: '48px 24px 80px',
 };
 const h1: React.CSSProperties = {
-  fontFamily: "'Bricolage Grotesque', sans-serif",
-  fontWeight: 800,
+  fontFamily: 'var(--ck-serif)',
+  fontWeight: 440,
   fontSize: 38,
+  letterSpacing: '-.02em',
   margin: '0 0 8px',
-  color: '#0A1C14',
+  color: 'var(--ck-text)',
 };
 const h2: React.CSSProperties = {
-  fontFamily: "'Bricolage Grotesque', sans-serif",
-  fontWeight: 700,
-  fontSize: 22,
+  fontFamily: "'Inter', system-ui, sans-serif",
+  fontWeight: 600,
+  fontSize: 19,
+  letterSpacing: '-.01em',
   margin: '36px 0 10px',
-  color: '#0C6A45',
+  color: 'var(--ck-text)',
 };
-const p: React.CSSProperties = { fontSize: 16, lineHeight: 1.7, color: '#2B3A33', margin: '0 0 14px' };
-const li: React.CSSProperties = { fontSize: 16, lineHeight: 1.7, color: '#2B3A33', margin: '0 0 8px' };
-const soft: React.CSSProperties = { color: '#5A6B62', fontSize: 14 };
+const p: React.CSSProperties = { fontSize: 15.5, lineHeight: 1.7, color: 'var(--ck-text2)', margin: '0 0 14px' };
+const li: React.CSSProperties = { fontSize: 15.5, lineHeight: 1.7, color: 'var(--ck-text2)', margin: '0 0 8px' };
+const soft: React.CSSProperties = { color: 'var(--ck-muted)', fontSize: 14 };
 
 export default function PrivacyPage() {
   return (
     <div style={wrap}>
       <div style={bar}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#fff', textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ck-text)', textDecoration: 'none' }}>
           <span style={mark}>C</span>
-          <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18 }}>CeloDesk</span>
+          <span style={{ fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 600, fontSize: 17, letterSpacing: '-.01em' }}>CeloDesk</span>
         </Link>
       </div>
 
@@ -129,11 +132,11 @@ export default function PrivacyPage() {
         <h2 style={h2}>Contact</h2>
         <p style={p}>
           If you have questions about this policy or want to request deletion of your data, contact us at{' '}
-          <a href="mailto:quadribello3@gmail.com" style={{ color: '#0C6A45', fontWeight: 600 }}>quadribello3@gmail.com</a>.
+          <a href="mailto:hello@celodesk.xyz" style={{ color: 'var(--ck-accent)', fontWeight: 500 }}>hello@celodesk.xyz</a>.
         </p>
 
         <p style={{ ...soft, marginTop: 40 }}>
-          <Link href="/" style={{ color: '#0C6A45', fontWeight: 600 }}>Back to CeloDesk</Link>
+          <Link href="/" style={{ color: 'var(--ck-accent)', fontWeight: 500 }}>Back to CeloDesk</Link>
         </p>
       </main>
     </div>
