@@ -11,6 +11,7 @@ import { router as agentRouter } from './routes/agent';
 import { router as x402Router } from './routes/x402';
 import { router as internalRouter } from './routes/internal';
 import { router as payLinkRouter } from './routes/payLinks';
+import { router as collectionRouter } from './routes/collections';
 import { assertAttributionIntegrity, HACKATHON_ATTRIBUTION_TAG } from './services/attribution';
 import { startRecurrenceScheduler } from './services/recurrence';
 
@@ -46,6 +47,7 @@ app.use('/api/agent', agentRouter);
 app.use('/api/x402', x402Router);
 app.use('/api/internal', internalRouter);
 app.use('/api/pay-links', payLinkRouter);
+app.use('/api/collections', collectionRouter);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

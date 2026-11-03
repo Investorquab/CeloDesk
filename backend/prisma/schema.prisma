@@ -43,6 +43,23 @@ enum Recurrence {
   MONTHLY
 }
 
+// Batch payouts ("Collections"): a supervisor collects many payees via one
+// shared link, reviews them, then pays everyone at once with a single Disperse
+// transaction per token. Semantics are inverted vs Invoice: here the supervisor
+// PAYS and each payee's wallet RECEIVES.
+enum CollectionStatus {
+  OPEN     // still accepting submissions
+  CLOSED   // no longer accepting submissions
+  PAID     // all accepted items have been paid out
+}
+
+enum CollectionItemStatus {
+  PENDING   // submitted, awaiting the supervisor's accept/reject
+  ACCEPTED  // approved, will be included in the batch payout
+  REJECTED  // declined by the supervisor
+  PAID      // paid out in a batch Disperse transaction
+}
+
 model User {
   id            String    @id @default(cuid())
   telegramId    String?   @unique
@@ -63,6 +80,7 @@ model User {
 
   profile       Profile?
   invoices      Invoice[]
+  collections   Collection[] @relation("CollectionSupervisor")
 }
 
 model Profile {
@@ -190,4 +208,52 @@ model Reminder {
   invoiceId   String
   sentAt      DateTime @default(now())
   channel     String   // "telegram" | "email"
+}
+
+model Collection {
+  id            String           @id @default(cuid())
+  // Shared link key payees open to submit their payout request.
+  publicSlug    String           @unique @default(cuid())
+
+  supervisorId  String
+  supervisor    User             @relation("CollectionSupervisor", fields: [supervisorId], references: [id])
+
+  title         String
+  description   String?
+  // If non-empty, payees may only submit in these token symbols; empty = any
+  // verified token is allowed.
+  allowedTokens String[]         @default([])
+
+  status        CollectionStatus @default(OPEN)
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  items         CollectionItem[]
+
+  @@index([supervisorId, status])
+}
+
+model CollectionItem {
+  id            String               @id @default(cuid())
+  collectionId  String
+  collection    Collection           @relation(fields: [collectionId], references: [id])
+
+  payeeName     String
+  payeeWallet   String               // the wallet this payee is paid to
+  tokenSymbol   String               // e.g. "USDC" — see src/celo/tokens.ts
+  tokenAddress  String               // resolved ERC20 address at submit time
+  amount        Decimal              @db.Decimal(18, 6)
+  note          String?
+
+  status        CollectionItemStatus @default(PENDING)
+
+  // Set when paid out via the batch Disperse transaction.
+  txHash        String?
+  paidAt        DateTime?
+
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([collectionId, status])
 }
