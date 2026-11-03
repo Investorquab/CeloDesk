@@ -6,7 +6,7 @@ It provides the merchant dashboard, invoice creation, public customer checkout, 
 
 ## Live app
 
-**[Open CeloDesk →](https://celo-desk.vercel.app)**
+**[Open CeloDesk →](https://celodesk.xyz)**
 
 ## What the web app covers
 
@@ -43,6 +43,6 @@ After payment, the backend verifies the on-chain transaction and the UI reflects
 ## Related interfaces
 
 - **[Telegram](https://t.me/celoagentbot)**
-- **[Claude / MCP](https://mcp.185-7-81-139.sslip.io/mcp)**
+- **[Claude / MCP](https://mcp.celodesk.xyz/mcp)**
 
 See the root [README](../README.md) for the product overview and [demo guide](../docs/DEMO.md) for the complete payment journey.

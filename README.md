@@ -10,7 +10,7 @@ It lets a merchant **create an invoice, share it, receive a direct wallet paymen
 
 ### 🌐 Live app
 
-**[Open CeloDesk →](https://celo-desk.vercel.app)**
+**[Open CeloDesk →](https://celodesk.xyz)**
 
 Create an invoice, share it, and open the customer payment page.
 
@@ -30,7 +30,7 @@ Try:
 
 ### 🤖 Claude / MCP
 
-**[Open the CeloDesk MCP endpoint →](https://mcp.185-7-81-139.sslip.io/mcp)**
+**[Open the CeloDesk MCP endpoint →](https://mcp.celodesk.xyz/mcp)**
 
 CeloDesk can be connected to a supported MCP client so an AI assistant can work with real CeloDesk invoices and payment data.
 
@@ -256,9 +256,9 @@ The current QR is therefore described as a **compatible-wallet payment QR**, not
 
 | Resource | Open |
 |---|---|
-| 🌐 **CeloDesk** | **[Live app](https://celo-desk.vercel.app)** |
+| 🌐 **CeloDesk** | **[Live app](https://celodesk.xyz)** |
 | 💬 **Telegram** | **[Open bot](https://t.me/celoagentbot)** |
-| 🤖 **MCP** | **[Open endpoint](https://mcp.185-7-81-139.sslip.io/mcp)** |
+| 🤖 **MCP** | **[Open endpoint](https://mcp.celodesk.xyz/mcp)** |
 | 📦 **GitHub** | **[View source](https://github.com/Investorquab/CeloDesk)** |
 | ⛓️ **Celo** | **[Celo mainnet explorer](https://celoscan.io/)** |
 | 📚 **Demo guide** | **[End-to-end demo](docs/DEMO.md)** |

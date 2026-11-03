@@ -12,7 +12,7 @@ The demo should show one real payment from beginning to end.
 
 ## 1. Start with the live product
 
-**[Open CeloDesk](https://celo-desk.vercel.app)**
+**[Open CeloDesk](https://celodesk.xyz)**
 
 Create a small invoice.
 
@@ -100,9 +100,9 @@ The three interfaces are connected to the same underlying payment system.
 
 ## Important links
 
-- **[🌐 Live CeloDesk](https://celo-desk.vercel.app)**
+- **[🌐 Live CeloDesk](https://celodesk.xyz)**
 - **[💬 CeloDesk Telegram](https://t.me/celoagentbot)**
-- **[🤖 CeloDesk MCP](https://mcp.185-7-81-139.sslip.io/mcp)**
+- **[🤖 CeloDesk MCP](https://mcp.celodesk.xyz/mcp)**
 - **[📦 GitHub repository](https://github.com/Investorquab/CeloDesk)**
 
 ## Current limitation
