@@ -111,6 +111,43 @@ const tools = [
   {
     type: 'function',
     function: {
+      name: 'create_batch',
+      description: 'Create a CeloDesk Batch Pay collection and return its share link. Use this when the merchant wants to pay many people at once (a "batch", "payout", "mass payout", "pay a group", "collect wallets to pay"). Each payee opens the share link and submits their own name, wallet, amount and token, so the payees are independent. The merchant then reviews and pays everyone at once in the web dashboard (the actual payout is signed in a wallet and cannot be done from chat). Optionally restrict which tokens payees may use; if omitted, any verified token is allowed.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'A short name for the batch, e.g. "October contractor payouts".' },
+          description: { type: 'string', description: 'Optional note shown to payees on the submission page.' },
+          allowedTokens: { type: 'array', items: { type: 'string', enum: SUPPORTED_TOKENS }, description: 'Optional list of tokens payees may choose. Leave empty to allow any verified token.' },
+        },
+        required: ['title'],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_batches',
+      description: 'List the authenticated merchant\'s Batch Pay collections with their status and submission counts. Use for questions such as "my batches", "my payouts", "list my batch pay".',
+      parameters: { type: 'object', properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_batch',
+      description: 'Get one Batch Pay collection: its status, submission counts, per-token accepted and pending totals, and the share link. Use batchId when known, or title to find the most recent batch whose name contains that text.',
+      parameters: {
+        type: 'object',
+        properties: { batchId: { type: 'string' }, title: { type: 'string' } },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'help',
       description: 'Explain what CeloDesk AI can do.',
       parameters: { type: 'object', properties: {}, additionalProperties: false },
@@ -289,8 +326,107 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
       const merchant = await getMerchant(merchantId);
       return { action: 'merchant_profile', merchant };
     }
+    case 'create_batch': {
+      const title = String(args.title ?? '').trim();
+      if (!title) throw new Error('Please give the batch a short title.');
+      const allowedTokens: string[] = [];
+      for (const sym of Array.isArray(args.allowedTokens) ? args.allowedTokens : []) {
+        const norm = normalizeToken(String(sym));
+        try { getToken(norm); allowedTokens.push(norm); }
+        catch { throw new Error(`Unknown or unverified token: ${sym}.`); }
+      }
+      const collection = await prisma.collection.create({
+        data: {
+          supervisorId: merchantId,
+          title: title.slice(0, 120),
+          description: String(args.description ?? '').trim().slice(0, 500) || null,
+          allowedTokens,
+        },
+      });
+      return {
+        action: 'batch_created',
+        batch: {
+          id: collection.id,
+          title: collection.title,
+          status: collection.status,
+          allowedTokens: collection.allowedTokens,
+          shareUrl: `${FRONTEND_URL}/collect/${collection.publicSlug}`,
+          dashboardUrl: `${FRONTEND_URL}/dashboard/batch/${collection.id}?merchantId=${merchantId}`,
+        },
+      };
+    }
+    case 'list_batches': {
+      const collections = await prisma.collection.findMany({
+        where: { supervisorId: merchantId },
+        orderBy: { createdAt: 'desc' },
+        include: { items: { select: { status: true } } },
+      });
+      return {
+        action: 'batches',
+        batches: collections.map((c) => ({
+          id: c.id,
+          title: c.title,
+          status: c.status,
+          counts: {
+            total: c.items.length,
+            pending: c.items.filter((i) => i.status === 'PENDING').length,
+            accepted: c.items.filter((i) => i.status === 'ACCEPTED').length,
+            rejected: c.items.filter((i) => i.status === 'REJECTED').length,
+            paid: c.items.filter((i) => i.status === 'PAID').length,
+          },
+          shareUrl: `${FRONTEND_URL}/collect/${c.publicSlug}`,
+          dashboardUrl: `${FRONTEND_URL}/dashboard/batch/${c.id}?merchantId=${merchantId}`,
+        })),
+      };
+    }
+    case 'get_batch': {
+      const collection = args.batchId
+        ? await prisma.collection.findUnique({ where: { id: String(args.batchId) }, include: { items: true } })
+        : args.title
+          ? await prisma.collection.findFirst({ where: { supervisorId: merchantId, title: { contains: String(args.title), mode: 'insensitive' } }, orderBy: { createdAt: 'desc' }, include: { items: true } })
+          : null;
+      if (!collection || collection.supervisorId !== merchantId) {
+        throw new Error('I could not find that batch. Try listing your batches first.');
+      }
+      // Per-token totals for accepted and pending payees, each formatted in its
+      // own currency so we never sum across different tokens.
+      const totals: Record<string, { accepted: number; pending: number }> = {};
+      for (const i of collection.items) {
+        if (i.status !== 'ACCEPTED' && i.status !== 'PENDING') continue;
+        const t = (totals[i.tokenSymbol] ??= { accepted: 0, pending: 0 });
+        if (i.status === 'ACCEPTED') t.accepted += Number(i.amount);
+        else t.pending += Number(i.amount);
+      }
+      const acceptedTotalsDisplay = Object.fromEntries(
+        Object.entries(totals).filter(([, v]) => v.accepted > 0).map(([sym, v]) => [sym, formatTokenAmount(sym, v.accepted)])
+      );
+      const pendingTotalsDisplay = Object.fromEntries(
+        Object.entries(totals).filter(([, v]) => v.pending > 0).map(([sym, v]) => [sym, formatTokenAmount(sym, v.pending)])
+      );
+      return {
+        action: 'batch_detail',
+        batch: {
+          id: collection.id,
+          title: collection.title,
+          description: collection.description,
+          status: collection.status,
+          allowedTokens: collection.allowedTokens,
+          counts: {
+            total: collection.items.length,
+            pending: collection.items.filter((i) => i.status === 'PENDING').length,
+            accepted: collection.items.filter((i) => i.status === 'ACCEPTED').length,
+            rejected: collection.items.filter((i) => i.status === 'REJECTED').length,
+            paid: collection.items.filter((i) => i.status === 'PAID').length,
+          },
+          acceptedTotalsDisplay,
+          pendingTotalsDisplay,
+          shareUrl: `${FRONTEND_URL}/collect/${collection.publicSlug}`,
+          dashboardUrl: `${FRONTEND_URL}/dashboard/batch/${collection.id}?merchantId=${merchantId}`,
+        },
+      };
+    }
     case 'help':
-      return { action: 'help', capabilities: ['Create invoices', 'See who owes you', 'Check invoice/payment status', 'See payment summary', 'Review recent activity', 'View your business profile'] };
+      return { action: 'help', capabilities: ['Create invoices', 'See who owes you', 'Check invoice/payment status', 'See payment summary', 'Review recent activity', 'View your business profile', 'Create and track Batch Pay payouts'] };
     default:
       throw new Error(`Unknown agent tool: ${name}`);
   }
@@ -308,6 +444,7 @@ Rules:
 - CeloDesk supports LatAm local currencies via Ripio wFIAT. When the user asks to invoice in a local currency, use the matching token: Brazilian real -> wBRL, Argentine peso -> wARS, Mexican peso -> wMXN, Colombian peso -> wCOP, Chilean peso -> wCLP, Peruvian sol -> wPEN. Each local currency maps to exactly one token, so "500 reais" or "invoice 20000 pesos argentinos" unambiguously means wBRL / wARS.
 - Understand normal token names including USDT, USD₮, Tether, USDC, USD Coin, USDm, Mento Dollar, NGNm, Mento Naira, and the Ripio wFIAT names (wBRL/real/reais, wARS/peso argentino, wMXN/peso mexicano, wCOP/peso colombiano, wCLP/peso chileno, wPEN/sol).
 - Never claim an invoice is paid unless backend data says PAID or OVERPAID.
+- CeloDesk Batch Pay lets a merchant pay many independent people at once. When the merchant wants to pay a group, collect wallets to pay out, or run a mass payout, use create_batch and give them the share link to send to the payees; each payee submits their own wallet, amount and token. Use list_batches and get_batch to report status, counts and per-token totals. The merchant reviews submissions and signs the single payout transaction in the web dashboard (give them the dashboardUrl) - you cannot accept, reject or pay from chat. Do not add token totals across different tokens; use the per-token display fields.
 - Never move funds, sign transactions, or ask for a private key.
 - If required information is missing for creation, ask only for the missing information, one focused question at a time when practical.
 - Keep answers short and useful. When a tool returns invoice rows, summarize the important details and let the UI render interactive rows.

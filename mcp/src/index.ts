@@ -18,6 +18,7 @@ dotenv.config({
 const PORT = Number(process.env.MCP_PORT || 3002);
 const BACKEND_API_URL =
   process.env.BACKEND_API_URL || 'http://127.0.0.1:3001';
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const MCP_TOKEN = process.env.CELODESK_MCP_TOKEN;
@@ -562,6 +563,127 @@ function createServer() {
             },
           ],
         };
+      }
+    },
+  );
+
+  server.registerTool(
+    'create_batch',
+    {
+      title: 'Create Batch Pay',
+      description:
+        'Create a CeloDesk Batch Pay collection for paying many independent people at once, and return its share link. ' +
+        'Each payee opens the share link and submits their own name, wallet, amount and token. The merchant then reviews ' +
+        'the submissions and signs the single payout transaction in the web dashboard — the payout cannot be done from here. ' +
+        'Optionally restrict which tokens payees may use; leave empty to allow any verified token.',
+      inputSchema: z.object({
+        title: z.string().min(1).max(120).describe('A short name for the batch, e.g. "October contractor payouts".'),
+        description: z.string().max(500).optional().describe('Optional note shown to payees on the submission page.'),
+        allowedTokens: z.array(z.string().min(2).max(12)).max(30).optional().describe('Optional list of token symbols payees may choose. Leave empty to allow any verified token.'),
+      }),
+    },
+    async ({ title, description, allowedTokens }) => {
+      try {
+        const result = await backendFetch('/api/collections', {
+          method: 'POST',
+          body: JSON.stringify({ title, description: description || undefined, allowedTokens: allowedTokens && allowedTokens.length ? allowedTokens : undefined }),
+        });
+        const shareUrl = `${FRONTEND_URL}/collect/${result.publicSlug}`;
+        const dashboardUrl = `${FRONTEND_URL}/dashboard/batch/${result.id}?merchantId=${encodeURIComponent(currentMerchantId())}`;
+        const text = [
+          '🎉 **Batch Pay created**',
+          '',
+          `👥 **${result.title}**`,
+          `🆔 **Batch ID:** ${result.id}`,
+          result.allowedTokens?.length ? `🪙 **Allowed tokens:** ${result.allowedTokens.join(', ')}` : '🪙 **Allowed tokens:** any verified token',
+          '',
+          `🔗 **Share this link with the people you want to pay:** ${shareUrl}`,
+          `📊 **Review and pay in your dashboard:** ${dashboardUrl}`,
+          '',
+          'Each person submits their own wallet, amount and token. You approve the real ones and pay everyone at once from your wallet in the dashboard.',
+        ].join('\n');
+        return { content: [{ type: 'text', text }] };
+      } catch (error) {
+        return { isError: true, content: [{ type: 'text', text: formatMcpError(error, 'Unable to create the batch.') }] };
+      }
+    },
+  );
+
+  server.registerTool(
+    'list_batches',
+    {
+      title: 'List Batch Pay',
+      description: 'List the authenticated merchant\'s Batch Pay collections with their status and submission counts.',
+      inputSchema: z.object({}),
+    },
+    async () => {
+      try {
+        const result = await backendFetch('/api/collections');
+        const batches = Array.isArray(result) ? result : [];
+        if (!batches.length) {
+          return { content: [{ type: 'text', text: '👥 **Batch Pay**\n\n🎉 No batches yet. Create one with create_batch.' }] };
+        }
+        const lines = ['👥 **Batch Pay** · ' + batches.length + ' total', ''];
+        for (const b of batches) {
+          const c = b.counts || {};
+          lines.push(
+            `• **${b.title}** · ${b.status} · ${c.total ?? 0} submitted (${c.pending ?? 0} pending, ${c.accepted ?? 0} accepted, ${c.paid ?? 0} paid)`,
+            `  🆔 ${b.id} · 🔗 ${FRONTEND_URL}/collect/${b.publicSlug}`,
+          );
+        }
+        return { content: [{ type: 'text', text: lines.join('\n') }] };
+      } catch (error) {
+        return { isError: true, content: [{ type: 'text', text: formatMcpError(error, 'Unable to list batches.') }] };
+      }
+    },
+  );
+
+  server.registerTool(
+    'get_batch',
+    {
+      title: 'Get Batch Pay',
+      description: 'Get one Batch Pay collection: its status, submission counts, per-token accepted and pending totals, and the share link. Use batchId when known, or title to find the most recent batch whose name contains that text.',
+      inputSchema: z.object({
+        batchId: z.string().min(1).optional(),
+        title: z.string().min(1).optional(),
+      }),
+    },
+    async ({ batchId, title }) => {
+      try {
+        let batch: any = null;
+        if (batchId) {
+          batch = await backendFetch(`/api/collections/${encodeURIComponent(batchId)}`);
+        } else if (title) {
+          const all = await backendFetch('/api/collections');
+          const needle = title.toLowerCase();
+          batch = (Array.isArray(all) ? all : []).find((b: any) => String(b.title || '').toLowerCase().includes(needle)) || null;
+        }
+        if (!batch) {
+          return { isError: true, content: [{ type: 'text', text: formatMcpError(new Error('I could not find that batch. Try list_batches first.'), 'Batch not found.') }] };
+        }
+        const items = Array.isArray(batch.items) ? batch.items : [];
+        const acc: Record<string, number> = {};
+        const pend: Record<string, number> = {};
+        for (const i of items) {
+          if (i.status === 'ACCEPTED') acc[i.tokenSymbol] = (acc[i.tokenSymbol] || 0) + Number(i.amount);
+          else if (i.status === 'PENDING') pend[i.tokenSymbol] = (pend[i.tokenSymbol] || 0) + Number(i.amount);
+        }
+        const c = batch.counts || {};
+        const shareUrl = `${FRONTEND_URL}/collect/${batch.publicSlug}`;
+        const dashboardUrl = `${FRONTEND_URL}/dashboard/batch/${batch.id}?merchantId=${encodeURIComponent(currentMerchantId())}`;
+        const lines = [
+          `👥 **${batch.title}** · ${batch.status}`,
+          batch.description ? `📝 ${batch.description}` : '',
+          `📊 **Submissions:** ${c.total ?? items.length} (${c.pending ?? 0} pending, ${c.accepted ?? 0} accepted, ${c.rejected ?? 0} rejected, ${c.paid ?? 0} paid)`,
+        ];
+        const accLines = Object.entries(acc).map(([s, v]) => `${v} ${s}`);
+        const pendLines = Object.entries(pend).map(([s, v]) => `${v} ${s}`);
+        if (accLines.length) lines.push(`✅ **Accepted total:** ${accLines.join(' · ')}`);
+        if (pendLines.length) lines.push(`⏳ **Pending total:** ${pendLines.join(' · ')}`);
+        lines.push('', `🔗 **Share link:** ${shareUrl}`, `📊 **Dashboard:** ${dashboardUrl}`);
+        return { content: [{ type: 'text', text: lines.filter(Boolean).join('\n') }] };
+      } catch (error) {
+        return { isError: true, content: [{ type: 'text', text: formatMcpError(error, 'Unable to get the batch.') }] };
       }
     },
   );
