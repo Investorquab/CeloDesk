@@ -169,18 +169,23 @@ function formatInvoice(invoice: any, detailed = false): string {
 
 function formatMcpResult(toolName: string, result: any): string {
   if (toolName === 'create_invoice') {
+    const emailed = !!result?.emailSent;
+    // The payment link is the client's view, not the merchant's. When CeloDesk
+    // has emailed the client, do not surface the link to the merchant; show it
+    // only as a fallback they can share when automatic delivery did not happen.
+    const invoiceBlock = formatInvoice(emailed ? { ...result, publicUrl: undefined } : result, true);
     let deliveryLine: string;
-    if (result?.emailSent) {
-      deliveryLine = `📧 Emailed directly to **${result.clientEmail}** — CeloDesk delivered it, so there is no need to forward anything.`;
+    if (emailed) {
+      deliveryLine = `📧 Emailed directly to **${result.clientEmail}** — CeloDesk delivered it to the client, so you do not need to forward or share anything.`;
     } else if (result?.clientEmail && result?.emailError) {
-      deliveryLine = `⚠️ Could not email **${result.clientEmail}** (${result.emailError}). Check the address or email configuration.`;
+      deliveryLine = `⚠️ Could not email **${result.clientEmail}** (${result.emailError}). As a fallback you can share this link with the client yourself: ${result.publicUrl}`;
     } else {
-      deliveryLine = '💡 No client email was given, so the invoice was not delivered. Add the client email to have CeloDesk email it directly to the client.';
+      deliveryLine = `💡 No client email was given, so CeloDesk did not deliver the invoice. Add a client email to have it emailed automatically, or share this link yourself: ${result.publicUrl}`;
     }
     return [
       '🎉 **Invoice created successfully**',
       '',
-      formatInvoice(result, true),
+      invoiceBlock,
       '',
       deliveryLine,
     ].join('\n');

@@ -444,6 +444,11 @@ bot.start(async (ctx) => {
   }
 });
 
+bot.command(['new', 'reset'], async (ctx) => {
+  const telegramId = String(ctx.from?.id || '');
+  if (telegramId) histories.delete(telegramId);
+  await ctx.reply('🧹 <b>Fresh start.</b>\n\nTell me the next invoice and I will create and send it, for example:\n<i>Invoice Joana 50 USDC for logo design, email joana@email.com</i>', { parse_mode: 'HTML', ...mainKeyboard });
+});
 bot.command('invoice', (ctx) => askAgent(ctx, 'Create an invoice'));
 bot.command('owed', (ctx) => askAgent(ctx, 'Who still owes me?'));
 bot.command('summary', (ctx) => askAgent(ctx, 'How much am I owed and what is my payment summary?'));
