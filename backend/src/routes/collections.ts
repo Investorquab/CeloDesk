@@ -18,10 +18,12 @@ import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthedRequest } from '../middleware/auth';
 import { getToken } from '../celo/tokens';
 import { appendAttribution } from '../services/attribution';
+import { sendEmail } from '../services/email';
 
 const prisma = new PrismaClient();
 export const router = Router();
 
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
 const WALLET_RE = /^0x[a-fA-F0-9]{40}$/;
 const AMOUNT_RE = /^\d+(\.\d{1,6})?$/;
 
@@ -44,6 +46,8 @@ function itemView(item: any) {
     amount: item.amount.toString(),
     note: item.note ?? null,
     status: item.status,
+    rejectionNote: item.rejectionNote ?? null,
+    hasEmail: !!item.payeeEmail,
     txHash: item.txHash ?? null,
     paidAt: item.paidAt ?? null,
     createdAt: item.createdAt,
@@ -150,9 +154,14 @@ router.post('/:id/status', requireAuth, async (req: AuthedRequest, res) => {
   res.json(collectionView(updated));
 });
 
-const decisionSchema = z.object({ decision: z.enum(['ACCEPTED', 'REJECTED']) });
+const decisionSchema = z.object({
+  decision: z.enum(['ACCEPTED', 'REJECTED']),
+  note: z.string().max(500).optional(),
+});
 
 // POST /api/collections/:id/items/:itemId/decision — accept or reject a payee.
+// On reject you may pass a note; if the payee gave an email, we email it to
+// them with the collection link so they can fix their details and resubmit.
 router.post('/:id/items/:itemId/decision', requireAuth, async (req: AuthedRequest, res) => {
   const parsed = decisionSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Choose accept or reject.' });
@@ -168,11 +177,33 @@ router.post('/:id/items/:itemId/decision', requireAuth, async (req: AuthedReques
   if (item.status === 'PAID') {
     return res.status(400).json({ error: 'This payee has already been paid and cannot be changed.' });
   }
+  const note = parsed.data.decision === 'REJECTED' ? (parsed.data.note?.trim() || null) : null;
   const updated = await prisma.collectionItem.update({
     where: { id: item.id },
-    data: { status: parsed.data.decision },
+    data: { status: parsed.data.decision, rejectionNote: note },
   });
-  res.json(itemView(updated));
+
+  // Let the payee know why they were rejected, so they can correct and resubmit.
+  let emailed = false;
+  if (parsed.data.decision === 'REJECTED' && item.payeeEmail && note) {
+    const resubmitUrl = `${FRONTEND_URL}/collect/${collection.publicSlug}`;
+    const safeNote = note.replace(/</g, '&lt;');
+    const html =
+      `<p>Hi ${item.payeeName.replace(/</g, '&lt;')},</p>` +
+      `<p>Your submission to <b>${collection.title.replace(/</g, '&lt;')}</b> needs a change before it can be paid:</p>` +
+      `<blockquote style="border-left:3px solid #ccc;padding-left:12px;color:#444">${safeNote}</blockquote>` +
+      `<p>You can submit again with the correct details here:<br><a href="${resubmitUrl}">${resubmitUrl}</a></p>`;
+    const r = await sendEmail({
+      to: item.payeeEmail,
+      toName: item.payeeName,
+      subject: `Please update your submission to ${collection.title}`,
+      html,
+      text: `Hi ${item.payeeName}, your submission to "${collection.title}" needs a change: ${note}\n\nResubmit here: ${resubmitUrl}`,
+    }).catch(() => ({ ok: false }));
+    emailed = !!r.ok;
+  }
+
+  res.json({ ...itemView(updated), emailedPayee: emailed });
 });
 
 // POST /api/collections/:id/pay-intent — build the batch payout for one token.
@@ -305,6 +336,7 @@ router.get('/by-slug/:slug', async (req, res) => {
 const submitSchema = z.object({
   payeeName: z.string().min(1).max(80),
   payeeWallet: z.string().regex(WALLET_RE, 'Enter a valid Celo wallet address (0x + 40 hex characters).'),
+  payeeEmail: z.string().email().optional(),
   tokenSymbol: z.string().min(2).max(12),
   amount: z.string().regex(AMOUNT_RE, 'Enter a valid amount.'),
   note: z.string().max(200).optional(),

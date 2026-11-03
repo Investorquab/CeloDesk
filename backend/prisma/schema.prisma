@@ -241,12 +241,17 @@ model CollectionItem {
 
   payeeName     String
   payeeWallet   String               // the wallet this payee is paid to
+  // Optional: lets the organizer email this payee if their submission is
+  // rejected (e.g. wrong wallet) so they can fix it and resubmit.
+  payeeEmail    String?
   tokenSymbol   String               // e.g. "USDC" — see src/celo/tokens.ts
   tokenAddress  String               // resolved ERC20 address at submit time
   amount        Decimal              @db.Decimal(18, 6)
   note          String?
 
   status        CollectionItemStatus @default(PENDING)
+  // The organizer's reason when rejecting, shown/sent to the payee.
+  rejectionNote String?
 
   // Set when paid out via the batch Disperse transaction.
   txHash        String?

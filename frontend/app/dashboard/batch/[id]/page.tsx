@@ -16,6 +16,7 @@ export default function Page({params,searchParams}:{params:{id:string};searchPar
  const [name,setName]=useState<string>();
  const [error,setError]=useState(''),[notice,setNotice]=useState('');
  const [busy,setBusy]=useState<string|null>(null);
+ const [rejectId,setRejectId]=useState<string|null>(null),[reason,setReason]=useState('');
  const [paying,setPaying]=useState<string|null>(null),[payNotice,setPayNotice]=useState('');
  const [link,setLink]=useState('');
 
@@ -24,7 +25,7 @@ export default function Page({params,searchParams}:{params:{id:string};searchPar
  useEffect(()=>{if(c&&typeof window!=='undefined')setLink(`${window.location.origin}/collect/${c.publicSlug}`);},[c]);
 
  async function copyLink(){try{await navigator.clipboard?.writeText(link);setNotice('Share link copied');setTimeout(()=>setNotice(''),1800);}catch{setError('Could not copy the link.');}}
- async function decide(item:CollectionItem,decision:'ACCEPTED'|'REJECTED'){setBusy(item.id);setError('');try{await api.setCollectionItemDecision(id,item.id,decision);load();}catch(e:any){setError(userFacingError(e,'Could not update this submission.'));}finally{setBusy(null);}}
+ async function decide(item:CollectionItem,decision:'ACCEPTED'|'REJECTED',note?:string){setBusy(item.id);setError('');try{const r=await api.setCollectionItemDecision(id,item.id,decision,note);setRejectId(null);setReason('');if(decision==='REJECTED'&&note&&item.hasEmail){setNotice(r.emailedPayee?`Rejected and emailed ${item.payeeName}.`:`Rejected. The email to ${item.payeeName} could not be sent.`);setTimeout(()=>setNotice(''),4000);}load();}catch(e:any){setError(userFacingError(e,'Could not update this submission.'));}finally{setBusy(null);}}
  async function toggleOpen(){if(!c)return;setBusy('status');setError('');try{await api.setCollectionStatus(id,c.status==='OPEN'?'CLOSED':'OPEN');load();}catch(e:any){setError(userFacingError(e,'Could not change the status.'));}finally{setBusy(null);}}
 
  async function waitReceipt(eth:any,hash:string){for(let i=0;i<80;i++){const r=await eth.request({method:'eth_getTransactionReceipt',params:[hash]});if(r){if(r.status!==undefined&&r.status!==null&&Number(r.status)===0)throw new Error('The transaction failed on-chain.');return r;}await new Promise(res=>setTimeout(res,3000));}throw new Error('Timed out waiting for confirmation. Check your wallet, then reload.');}
@@ -78,33 +79,47 @@ export default function Page({params,searchParams}:{params:{id:string};searchPar
    </div>
 
    <div className={s.panel}>
-    <div className={s.ph}><div><div className={s.kick}>Submissions</div><h1 style={{fontSize:20}}>Review and approve</h1></div></div>
+    <div style={{padding:'16px 22px',borderBottom:'1px solid var(--line)'}}>
+     <div style={{fontSize:13,color:'var(--text-2)',fontFamily:'var(--mono, monospace)'}}>Submissions</div>
+     <h2 style={{fontSize:18,marginTop:4}}>Review and approve</h2>
+    </div>
     {c.items.length?<div className={s.tableWrap}><table className={s.tbl}>
      <thead><tr><th>Payee</th><th>Wallet</th><th>Amount</th><th>Status</th><th/></tr></thead>
      <tbody>{c.items.map(i=><tr key={i.id}>
-      <td><div className={s.cl}><span className={s.cd}>{i.payeeName.slice(0,1).toUpperCase()}</span><span className={s.clName}>{i.payeeName}{i.note?<span className={s.via} style={{display:'block'}}>{i.note}</span>:null}</span></div></td>
+      <td><div className={s.cl}><span className={s.cd}>{i.payeeName.slice(0,1).toUpperCase()}</span><span className={s.clName}>{i.payeeName}{i.note?<span className={s.via} style={{display:'block'}}>{i.note}</span>:null}{i.status==='REJECTED'&&i.rejectionNote?<span className={s.via} style={{display:'block',color:'var(--neg,#c0392b)'}}>Rejected: {i.rejectionNote}{i.hasEmail?' · payee emailed':''}</span>:null}</span></div></td>
       <td className={s.mono}>{shortAddr(i.payeeWallet)}</td>
       <td className={s.mono}>{money(i.amount,i.tokenSymbol)}</td>
       <td><span className={`${s.tag} ${i.status==='PAID'?s.tagPaid:i.status==='ACCEPTED'?s.tagSent:i.status==='REJECTED'?s.tagOverdue:s.tagPending}`}>{i.status}</span></td>
       <td className={s.rowActions}>
-       {(i.status==='PENDING'||i.status==='REJECTED')&&<button className={`${s.btn} ${s.btnLine}`} disabled={busy===i.id} onClick={()=>decide(i,'ACCEPTED')}>Accept</button>}
-       {(i.status==='PENDING'||i.status==='ACCEPTED')&&<button className={`${s.btn} ${s.btnSoft}`} disabled={busy===i.id} onClick={()=>decide(i,'REJECTED')} style={{marginLeft:8}}>Reject</button>}
+       {rejectId===i.id?<div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
+        <input autoFocus value={reason} onChange={e=>setReason(e.target.value)} placeholder={i.hasEmail?'Reason (emailed to payee)':'Reason (optional)'} maxLength={500} style={{padding:'6px 9px',border:'1px solid var(--line)',borderRadius:8,background:'var(--raised)',color:'var(--text)',fontSize:13,minWidth:170}}/>
+        <button className={`${s.btn} ${s.btnSoft}`} disabled={busy===i.id} onClick={()=>decide(i,'REJECTED',reason.trim()||undefined)}>{busy===i.id?'...':'Confirm reject'}</button>
+        <button className={`${s.btn} ${s.btnLine}`} disabled={busy===i.id} onClick={()=>{setRejectId(null);setReason('');}}>Cancel</button>
+       </div>:<>
+        {(i.status==='PENDING'||i.status==='REJECTED')&&<button className={`${s.btn} ${s.btnLine}`} disabled={busy===i.id} onClick={()=>decide(i,'ACCEPTED')}>Accept</button>}
+        {(i.status==='PENDING'||i.status==='ACCEPTED')&&<button className={`${s.btn} ${s.btnSoft}`} disabled={busy===i.id} onClick={()=>{setRejectId(i.id);setReason('');setError('');}} style={{marginLeft:8}}>Reject</button>}
+       </>}
       </td>
      </tr>)}</tbody>
     </table></div>:<div className={s.empty}><div className={s.h}>No submissions yet</div><p>Share the link above. Each person opens it and submits their name, wallet, amount and token.</p></div>}
    </div>
 
    <div className={s.panel}>
-    <div className={s.ph}><div><div className={s.kick}>Payout</div><h1 style={{fontSize:20}}>Pay accepted</h1></div></div>
-    {payNotice&&<div className={s.toast} style={{marginBottom:12}}><Clock size={15}/>{payNotice}</div>}
-    {Object.keys(acceptedTotals).length?<>
-     <p className={s.hint} style={{marginTop:2,marginBottom:12}}>Each currency is paid to everyone at once in a single transaction. Pay from the wallet you want the funds to come from.</p>
-     {Object.keys(acceptedTotals).map(t=>{const n=c.items.filter(i=>i.status==='ACCEPTED'&&i.tokenSymbol===t).length;return(
-      <div key={t} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,padding:'12px 0',borderTop:'1px solid var(--line)'}}>
-       <div><div className={s.mono} style={{fontSize:16}}>{money(String(acceptedTotals[t]),t)}</div><div className={s.via}>to {n} payee{n===1?'':'s'} in {t}</div></div>
-       <button className={`${s.btn} ${s.btnDark}`} disabled={!!paying} onClick={()=>payToken(t)}>{paying===t?'Paying...':`Pay ${t}`}</button>
-      </div>);})}
-    </>:<p className={s.hint} style={{marginTop:8}}>Accept submissions above to include them in the payout.</p>}
+    <div style={{padding:'16px 22px',borderBottom:'1px solid var(--line)'}}>
+     <div style={{fontSize:13,color:'var(--text-2)',fontFamily:'var(--mono, monospace)'}}>Payout</div>
+     <h2 style={{fontSize:18,marginTop:4}}>Pay accepted</h2>
+    </div>
+    <div style={{padding:'16px 22px'}}>
+     {payNotice&&<div className={s.toast} style={{marginBottom:12}}><Clock size={15}/>{payNotice}</div>}
+     {Object.keys(acceptedTotals).length?<>
+      <p className={s.hint} style={{marginTop:0,marginBottom:4}}>Each currency is paid to everyone at once in a single transaction. Pay from the wallet you want the funds to come from.</p>
+      {Object.keys(acceptedTotals).map(t=>{const n=c.items.filter(i=>i.status==='ACCEPTED'&&i.tokenSymbol===t).length;return(
+       <div key={t} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,padding:'14px 0 2px',borderTop:'1px solid var(--line)',marginTop:12}}>
+        <div><div className={s.mono} style={{fontSize:16}}>{money(String(acceptedTotals[t]),t)}</div><div className={s.via}>to {n} payee{n===1?'':'s'} in {t}</div></div>
+        <button className={`${s.btn} ${s.btnDark}`} disabled={!!paying} onClick={()=>payToken(t)}>{paying===t?'Paying...':`Pay ${t}`}</button>
+       </div>);})}
+     </>:<p className={s.hint} style={{margin:0}}>Accept submissions above to include them in the payout.</p>}
+    </div>
    </div>
    <div style={{height:40}}/>
   </div>

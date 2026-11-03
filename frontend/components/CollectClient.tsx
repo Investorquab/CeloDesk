@@ -16,6 +16,7 @@ export default function CollectClient({slug}: {slug: string}) {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [name, setName] = useState('');
   const [wallet, setWallet] = useState('');
+  const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
@@ -46,11 +47,12 @@ export default function CollectClient({slug}: {slug: string}) {
     setErr('');
     if (!name.trim()) return setErr('Enter your name.');
     if (!WALLET_RE.test(wallet.trim())) return setErr('Enter a valid Celo wallet address (0x followed by 40 characters).');
+    if (email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) return setErr('Enter a valid email address, or leave it blank.');
     if (!token) return setErr('Choose a currency.');
     if (!amount || Number(amount) <= 0) return setErr('Enter an amount greater than zero.');
     setBusy(true);
     try {
-      await api.submitCollectionItem(slug, {payeeName: name.trim(), payeeWallet: wallet.trim(), tokenSymbol: token, amount, note: note.trim() || undefined});
+      await api.submitCollectionItem(slug, {payeeName: name.trim(), payeeWallet: wallet.trim(), tokenSymbol: token, amount, note: note.trim() || undefined, payeeEmail: email.trim() || undefined});
       setDone(true);
     } catch (e: any) {
       setErr(userFacingError(e, 'Could not submit. Please try again.'));
@@ -110,6 +112,10 @@ export default function CollectClient({slug}: {slug: string}) {
                 </select>
               </label>
             </div>
+            <label style={labelStyle}>Email (optional)
+              <input style={fieldStyle} type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={120} spellCheck={false} />
+            </label>
+            <p style={{fontSize: 11, color: 'var(--text-2)', marginTop: 6, marginBottom: 0, textAlign: 'left'}}>Only used to reach you if your details need a fix before payout.</p>
             <label style={labelStyle}>Note (optional)
               <input style={fieldStyle} placeholder="What this is for" value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
             </label>
