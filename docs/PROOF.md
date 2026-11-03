@@ -35,3 +35,28 @@ _Pending: a real tagged wFIAT invoice payment on mainnet (Stage 8)._
 ## 3. Track 2 — USA₮ over x402
 _Pending: a real USA₮ settlement via the x402 facilitator (Stage 8). Record the
 PayTo wallet (merchant receiving wallet) — x402 settlements carry no attribution tag._
+
+## 4. Batch Pay — one-transaction payout to independent parties (2026-11-03)
+
+CeloDesk "Batch Pay" lets an organizer collect payout requests from many people
+via one shared link, approve the legitimate ones, and pay everyone at once in a
+single tagged transaction through the verified Disperse contract on Celo mainnet
+(`0xD152f549545093347A162Dce210e7293f1452150`, `disperseToken`).
+
+- **What:** one `disperseToken` transaction paid **3 independent payee wallets**
+  0.02 USDT total (0.006 + 0.007 + 0.007), from the agent wallet.
+- **From (payer/organizer):** `0x00d1E86040d88397F4eB187c38dC527F6659e486`
+- **To (Disperse contract):** `0xD152f549545093347A162Dce210e7293f1452150`
+- **Payees (independent wallets):**
+  `0x95b261d1cf925ed330eb0490eb98010d66824238` (0.006 USDT),
+  `0xde98e7de50dbf3aff588ec510056bd010cfc37cf` (0.007 USDT),
+  `0x28a8d7cf12b924499f121e6359502674443cbff7` (0.007 USDT)
+- **Token:** USDT (`0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e`, 6 decimals)
+- **Tx hash:** `0x637834a666c64db86c0c0ca18b93d4440d05eeb4dbdfc1d30c433a7c0b2f139f`
+- **Block:** 81817617 · **Status:** success · 4 ERC20 Transfer events (total pulled + 3 payouts)
+- **Explorer:** https://celoscan.io/tx/0x637834a666c64db86c0c0ca18b93d4440d05eeb4dbdfc1d30c433a7c0b2f139f
+- **Tag verified:** `npm run verify-tag -- 0x637834a666c64db86c0c0ca18b93d4440d05eeb4dbdfc1d30c433a7c0b2f139f`
+  decodes `celo_3fce81a170fc` from the transaction calldata.
+- **Why it matters:** real settlement between independent parties in one on-chain
+  transaction — the payees submitted their own wallets via the public link and
+  were paid directly, not through the organizer forwarding anything.
