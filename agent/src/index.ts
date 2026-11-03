@@ -313,6 +313,9 @@ async function askAgent(ctx: any, text: string) {
       // whole reply. Do not also send the model's free text, which tends to
       // echo the client pay link back to the merchant as "view it here".
       await sendInvoiceArtifact(ctx, invoiceArtifact);
+      // Reset context after a successful create so the next invoice starts
+      // fresh and the model can never reuse this invoice's client/amount/email.
+      histories.delete(telegramId);
     } else {
       const formatted = formatArtifactReply(displayArtifact) || formatGenericTelegramReply(reply);
       await sendTelegramText(ctx, formatted);
@@ -449,13 +452,13 @@ bot.command(['new', 'reset'], async (ctx) => {
   if (telegramId) histories.delete(telegramId);
   await ctx.reply('🧹 <b>Fresh start.</b>\n\nTell me the next invoice and I will create and send it, for example:\n<i>Invoice Joana 50 USDC for logo design, email joana@email.com</i>', { parse_mode: 'HTML', ...mainKeyboard });
 });
-bot.command('invoice', (ctx) => askAgent(ctx, 'Create an invoice'));
+bot.command('invoice', (ctx) => { const id = String(ctx.from?.id || ''); if (id) histories.delete(id); return askAgent(ctx, 'Create an invoice'); });
 bot.command('owed', (ctx) => askAgent(ctx, 'Who still owes me?'));
 bot.command('summary', (ctx) => askAgent(ctx, 'How much am I owed and what is my payment summary?'));
 bot.command('invoices', (ctx) => askAgent(ctx, 'Show me my recent invoices and their statuses.'));
 bot.command('help', (ctx) => askAgent(ctx, 'What can you help me with?'));
 
-bot.action('create_invoice', async (ctx) => { await ctx.answerCbQuery(); await askAgent(ctx, 'Create an invoice'); });
+bot.action('create_invoice', async (ctx) => { await ctx.answerCbQuery(); const id = String(ctx.from?.id || ''); if (id) histories.delete(id); await askAgent(ctx, 'Create an invoice'); });
 bot.action('who_owes', async (ctx) => { await ctx.answerCbQuery(); await askAgent(ctx, 'Who still owes me?'); });
 bot.action('summary', async (ctx) => { await ctx.answerCbQuery(); await askAgent(ctx, 'How much am I owed and what is my payment summary?'); });
 bot.action('invoices', async (ctx) => { await ctx.answerCbQuery(); await askAgent(ctx, 'Show me my recent invoices and their statuses.'); });
