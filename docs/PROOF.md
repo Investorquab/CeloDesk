@@ -17,6 +17,18 @@ Agent wallet: `0x00d1E86040d88397F4eB187c38dC527F6659e486`.
 - **Satisfies:** both the ERC-8004 identity check and the "tagged transaction
   sent from the agent wallet" check, in one transaction.
 
+### 1a. Card re-pointed to the celodesk.xyz domain (2026-11-03)
+
+- **What:** second `setAgentURI(9799, <CeloDesk card>)` updating the on-chain card
+  to the branded domain — `web https://celodesk.xyz`, `MCP https://mcp.celodesk.xyz/mcp`,
+  `A2A https://celodesk.xyz/.well-known/agent-card.json` (was the old
+  `celo-desk.vercel.app` / `mcp.185-7-81-139.sslip.io` hosts).
+- **Tx hash:** `0x1c6187465f629089cfda100d07ce5aeeeaf44aa097b6b280eb6b912c374173f4`
+- **Block:** 81776658 · **Status:** success
+- **Explorer:** https://celoscan.io/tx/0x1c6187465f629089cfda100d07ce5aeeeaf44aa097b6b280eb6b912c374173f4
+- **Tag verified:** `npm run verify-tag -- 0x1c6187465f629089cfda100d07ce5aeeeaf44aa097b6b280eb6b912c374173f4`
+  decodes `celo_3fce81a170fc`. `tokenURI(9799)` now resolves to the celodesk.xyz card.
+
 ## 2. Track 1 — Ripio wFIAT payment
 _Pending: a real tagged wFIAT invoice payment on mainnet (Stage 8)._
 
