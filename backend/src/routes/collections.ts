@@ -13,15 +13,25 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { ethers } from 'ethers';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthedRequest } from '../middleware/auth';
 import { getToken } from '../celo/tokens';
+import { appendAttribution } from '../services/attribution';
 
 const prisma = new PrismaClient();
 export const router = Router();
 
 const WALLET_RE = /^0x[a-fA-F0-9]{40}$/;
 const AMOUNT_RE = /^\d+(\.\d{1,6})?$/;
+
+// Disperse: batch ERC20 payout contract, verified on Celo mainnet. Lets the
+// supervisor pay every accepted payee of one token in a single transaction
+// (after a one-time approve). disperseToken(token, recipients[], values[]).
+const DISPERSE_ADDRESS = '0xD152f549545093347A162Dce210e7293f1452150';
+const CHAIN_ID = 42220;
+const ERC20_APPROVE_ABI = ['function approve(address spender, uint256 amount) returns (bool)'];
+const DISPERSE_ABI = ['function disperseToken(address token, address[] recipients, uint256[] values)'];
 
 // Serialize an item for API responses (Decimal -> string).
 function itemView(item: any) {
@@ -163,6 +173,114 @@ router.post('/:id/items/:itemId/decision', requireAuth, async (req: AuthedReques
     data: { status: parsed.data.decision },
   });
   res.json(itemView(updated));
+});
+
+// POST /api/collections/:id/pay-intent — build the batch payout for one token.
+// Returns an (optional) approve transaction and the single disperseToken
+// transaction that pays every accepted payee of that token. Both carry the
+// attribution tag in their calldata. The wallet signs them; nothing is sent
+// here.
+const payIntentSchema = z.object({
+  tokenSymbol: z.string().min(2).max(12),
+  payerAddress: z.string(),
+});
+router.post('/:id/pay-intent', requireAuth, async (req: AuthedRequest, res) => {
+  const parsed = payIntentSchema.safeParse(req.body);
+  if (!parsed.success || !ethers.isAddress(parsed.data.payerAddress)) {
+    return res.status(400).json({ error: 'A token and a valid payer wallet are required.' });
+  }
+  const collection = await prisma.collection.findUnique({ where: { id: req.params.id } });
+  if (!collection || collection.supervisorId !== req.merchantId) {
+    return res.status(404).json({ error: 'Collection not found.' });
+  }
+
+  let token;
+  try {
+    token = getToken(parsed.data.tokenSymbol);
+  } catch {
+    return res.status(400).json({ error: `Unsupported token: ${parsed.data.tokenSymbol}.` });
+  }
+
+  const items = await prisma.collectionItem.findMany({
+    where: { collectionId: collection.id, tokenSymbol: parsed.data.tokenSymbol, status: 'ACCEPTED' },
+    orderBy: { createdAt: 'asc' },
+  });
+  if (!items.length) {
+    return res.status(400).json({ error: `No accepted payees in ${parsed.data.tokenSymbol} to pay.` });
+  }
+
+  const recipients = items.map((i) => i.payeeWallet);
+  const values = items.map((i) => ethers.parseUnits(i.amount.toString(), token!.decimals));
+  const total = values.reduce((a, b) => a + b, 0n);
+
+  const approveData = appendAttribution(
+    new ethers.Interface(ERC20_APPROVE_ABI).encodeFunctionData('approve', [DISPERSE_ADDRESS, total]) as `0x${string}`,
+  );
+  const disperseData = appendAttribution(
+    new ethers.Interface(DISPERSE_ABI).encodeFunctionData('disperseToken', [token.address, recipients, values]) as `0x${string}`,
+  );
+
+  res.json({
+    tokenSymbol: parsed.data.tokenSymbol,
+    tokenAddress: token.address,
+    decimals: token.decimals,
+    chainId: CHAIN_ID,
+    disperseAddress: DISPERSE_ADDRESS,
+    itemIds: items.map((i) => i.id),
+    recipients,
+    values: values.map((v) => v.toString()),
+    total: total.toString(),
+    // approve the Disperse contract to move `total` of this token, then call it.
+    approve: { to: token.address, data: approveData, value: '0x0', chainId: CHAIN_ID },
+    disperse: { to: DISPERSE_ADDRESS, data: disperseData, value: '0x0', chainId: CHAIN_ID },
+  });
+});
+
+// POST /api/collections/:id/pay/confirm — record a completed batch payout.
+// Verifies the transaction really went to Disperse and succeeded, then marks
+// every accepted payee of that token as PAID.
+const confirmSchema = z.object({
+  tokenSymbol: z.string().min(2).max(12),
+  txHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, 'A valid transaction hash is required.'),
+});
+router.post('/:id/pay/confirm', requireAuth, async (req: AuthedRequest, res) => {
+  const parsed = confirmSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'A token and a valid transaction hash are required.' });
+
+  const collection = await prisma.collection.findUnique({ where: { id: req.params.id } });
+  if (!collection || collection.supervisorId !== req.merchantId) {
+    return res.status(404).json({ error: 'Collection not found.' });
+  }
+
+  // Confirm the transaction on-chain before marking anyone paid.
+  try {
+    const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+    const receipt = await provider.getTransactionReceipt(parsed.data.txHash);
+    if (!receipt) return res.status(400).json({ error: 'Transaction not found yet. Wait for it to confirm and try again.' });
+    if (receipt.status !== 1) return res.status(400).json({ error: 'That transaction failed on-chain; no one was marked paid.' });
+    if ((receipt.to || '').toLowerCase() !== DISPERSE_ADDRESS.toLowerCase()) {
+      return res.status(400).json({ error: 'That transaction was not a batch payout to the Disperse contract.' });
+    }
+  } catch (e: any) {
+    return res.status(400).json({ error: 'Could not verify the transaction on-chain. Please try again shortly.' });
+  }
+
+  await prisma.collectionItem.updateMany({
+    where: { collectionId: collection.id, tokenSymbol: parsed.data.tokenSymbol, status: 'ACCEPTED' },
+    data: { status: 'PAID', txHash: parsed.data.txHash, paidAt: new Date() },
+  });
+
+  // If nothing accepted remains unpaid, the whole collection is paid out.
+  const remaining = await prisma.collectionItem.count({ where: { collectionId: collection.id, status: 'ACCEPTED' } });
+  if (remaining === 0) {
+    await prisma.collection.update({ where: { id: collection.id }, data: { status: 'PAID' } });
+  }
+
+  const updated = await prisma.collection.findUnique({
+    where: { id: collection.id },
+    include: { items: { orderBy: { createdAt: 'asc' } } },
+  });
+  res.json(collectionView(updated));
 });
 
 // ----- Public payee submission (no auth) -----

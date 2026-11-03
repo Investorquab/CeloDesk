@@ -11,6 +11,8 @@ export type CollectionItemStatus='PENDING'|'ACCEPTED'|'REJECTED'|'PAID';
 export type CollectionItem={id:string;payeeName:string;payeeWallet:string;tokenSymbol:string;tokenAddress:string;amount:string;note?:string|null;status:CollectionItemStatus;txHash?:string|null;paidAt?:string|null;createdAt:string};
 export type Collection={id:string;publicSlug:string;title:string;description?:string|null;allowedTokens:string[];status:'OPEN'|'CLOSED'|'PAID';createdAt:string;items:CollectionItem[];counts:{total:number;pending:number;accepted:number;rejected:number;paid:number}};
 export type CollectionPublic={title:string;description?:string|null;allowedTokens:string[];status:string;organizer:string;open:boolean};
+export type ChainTx={to:string;data:string;value:string;chainId:number};
+export type CollectionPayIntent={tokenSymbol:string;tokenAddress:string;decimals:number;chainId:number;disperseAddress:string;itemIds:string[];recipients:string[];values:string[];total:string;approve:ChainTx;disperse:ChainTx};
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 async function request<T>(path:string, options:RequestInit={}) { const session=getSession(); const headers=new Headers(options.headers); headers.set('Content-Type','application/json'); if(session?.token) headers.set('Authorization',`Bearer ${session.token}`); const r=await fetch(`${API}${path}`,{...options,headers,cache:'no-store'}); const b=await r.json().catch(()=>({})); if(!r.ok) throw new Error(b.error||b.message||`Request failed (${r.status})`); return b as T; }
@@ -48,6 +50,8 @@ export const api={
  setCollectionItemDecision:(id:string,itemId:string,decision:'ACCEPTED'|'REJECTED')=>request<CollectionItem>(`/api/collections/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}/decision`,{method:'POST',body:JSON.stringify({decision})}),
  getCollectionPublic:(slug:string)=>request<CollectionPublic>(`/api/collections/by-slug/${encodeURIComponent(slug)}`),
  submitCollectionItem:(slug:string,data:{payeeName:string;payeeWallet:string;tokenSymbol:string;amount:string;note?:string})=>request<{ok:boolean;id:string}>(`/api/collections/by-slug/${encodeURIComponent(slug)}/items`,{method:'POST',body:JSON.stringify(data)}),
+ collectionPayIntent:(id:string,tokenSymbol:string,payerAddress:string)=>request<CollectionPayIntent>(`/api/collections/${encodeURIComponent(id)}/pay-intent`,{method:'POST',body:JSON.stringify({tokenSymbol,payerAddress})}),
+ collectionPayConfirm:(id:string,tokenSymbol:string,txHash:string)=>request<Collection>(`/api/collections/${encodeURIComponent(id)}/pay/confirm`,{method:'POST',body:JSON.stringify({tokenSymbol,txHash})}),
 };
 // Local-currency display for Celo stablecoins. Mirrors the backend token
 // registry (src/celo/tokens.ts) so money() can stay synchronous. wFIAT

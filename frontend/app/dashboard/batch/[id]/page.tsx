@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {api,Collection,CollectionItem,money} from '../../../../lib/api';
 import AppHeaderV2 from '../../../../components/AppHeaderV2';
-import {Users,Check,Copy,ArrowLeft,ArrowRight} from '../../../../components/Icons';
+import {Users,Check,Copy,ArrowLeft,ArrowRight,Clock} from '../../../../components/Icons';
 import {userFacingError} from '../../../../lib/userFacingError';
 import s from '../../../../components/AppShell.module.css';
 
@@ -16,6 +16,7 @@ export default function Page({params,searchParams}:{params:{id:string};searchPar
  const [name,setName]=useState<string>();
  const [error,setError]=useState(''),[notice,setNotice]=useState('');
  const [busy,setBusy]=useState<string|null>(null);
+ const [paying,setPaying]=useState<string|null>(null),[payNotice,setPayNotice]=useState('');
  const [link,setLink]=useState('');
 
  function load(){api.getCollection(id).then(setC).catch(e=>setError(userFacingError(e,'Could not load this batch.')));}
@@ -25,6 +26,24 @@ export default function Page({params,searchParams}:{params:{id:string};searchPar
  async function copyLink(){try{await navigator.clipboard?.writeText(link);setNotice('Share link copied');setTimeout(()=>setNotice(''),1800);}catch{setError('Could not copy the link.');}}
  async function decide(item:CollectionItem,decision:'ACCEPTED'|'REJECTED'){setBusy(item.id);setError('');try{await api.setCollectionItemDecision(id,item.id,decision);load();}catch(e:any){setError(userFacingError(e,'Could not update this submission.'));}finally{setBusy(null);}}
  async function toggleOpen(){if(!c)return;setBusy('status');setError('');try{await api.setCollectionStatus(id,c.status==='OPEN'?'CLOSED':'OPEN');load();}catch(e:any){setError(userFacingError(e,'Could not change the status.'));}finally{setBusy(null);}}
+
+ async function waitReceipt(eth:any,hash:string){for(let i=0;i<80;i++){const r=await eth.request({method:'eth_getTransactionReceipt',params:[hash]});if(r){if(r.status!==undefined&&r.status!==null&&Number(r.status)===0)throw new Error('The transaction failed on-chain.');return r;}await new Promise(res=>setTimeout(res,3000));}throw new Error('Timed out waiting for confirmation. Check your wallet, then reload.');}
+ async function payToken(token:string){setError('');setPaying(token);try{
+  const eth=(window as any).ethereum;
+  if(!eth)throw new Error('No wallet detected. Open CeloDesk in a Celo wallet (e.g. MiniPay or MetaMask).');
+  const accts=await eth.request({method:'eth_requestAccounts'});const from=accts?.[0];if(!from)throw new Error('No wallet account selected.');
+  const target='0xa4ec';const cur=await eth.request({method:'eth_chainId'});
+  if(String(cur).toLowerCase()!==target){try{await eth.request({method:'wallet_switchEthereumChain',params:[{chainId:target}]});}catch(se:any){if(se?.code===4902){await eth.request({method:'wallet_addEthereumChain',params:[{chainId:target,chainName:'Celo Mainnet',nativeCurrency:{name:'Celo',symbol:'CELO',decimals:18},rpcUrls:['https://forno.celo.org'],blockExplorerUrls:['https://celoscan.io']}]});}else throw se;}}
+  const intent=await api.collectionPayIntent(id,token,from);
+  setPayNotice(`Approve ${token} spending in your wallet...`);
+  const ah=await eth.request({method:'eth_sendTransaction',params:[{from,to:intent.approve.to,data:intent.approve.data,value:intent.approve.value}]});
+  setPayNotice('Waiting for the approval to confirm...');await waitReceipt(eth,ah);
+  setPayNotice('Confirm the batch payment in your wallet...');
+  const dh=await eth.request({method:'eth_sendTransaction',params:[{from,to:intent.disperse.to,data:intent.disperse.data,value:intent.disperse.value}]});
+  setPayNotice('Paying everyone, waiting for Celo confirmation...');await waitReceipt(eth,dh);
+  await api.collectionPayConfirm(id,token,dh);
+  setPayNotice('');setNotice(`Paid ${token} to everyone. Tx ${dh.slice(0,10)}...`);setTimeout(()=>setNotice(''),5000);load();
+ }catch(e:any){setPayNotice('');setError(userFacingError(e,'The payout could not be completed.'));}finally{setPaying(null);}}
 
  if(!c) return <div className={s.app}><AppHeaderV2 merchantId={merchantId} businessName={name}/><div className={s.wrap}>{error?<div className={s.err} style={{marginTop:18}}>{error}</div>:<div className={s.empty} style={{marginTop:40}}><div className={s.h}>Loading batch...</div></div>}</div></div>;
 
@@ -76,9 +95,16 @@ export default function Page({params,searchParams}:{params:{id:string};searchPar
    </div>
 
    <div className={s.panel}>
-    <div className={s.tl}>Payout</div>
-    {Object.keys(acceptedTotals).length?<p className={s.hint} style={{marginTop:8}}>Accepted so far: {Object.entries(acceptedTotals).map(([t,v])=>`${v} ${t}`).join('  ·  ')}. Everyone in a currency is paid in a single transaction.</p>:<p className={s.hint} style={{marginTop:8}}>Accept submissions above to include them in the payout.</p>}
-    <button className={`${s.btn} ${s.btnDark}`} style={{marginTop:10}} disabled title="Arriving in the next step">Pay accepted (coming next)</button>
+    <div className={s.ph}><div><div className={s.kick}>Payout</div><h1 style={{fontSize:20}}>Pay accepted</h1></div></div>
+    {payNotice&&<div className={s.toast} style={{marginBottom:12}}><Clock size={15}/>{payNotice}</div>}
+    {Object.keys(acceptedTotals).length?<>
+     <p className={s.hint} style={{marginTop:2,marginBottom:12}}>Each currency is paid to everyone at once in a single transaction. Pay from the wallet you want the funds to come from.</p>
+     {Object.keys(acceptedTotals).map(t=>{const n=c.items.filter(i=>i.status==='ACCEPTED'&&i.tokenSymbol===t).length;return(
+      <div key={t} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,padding:'12px 0',borderTop:'1px solid var(--line)'}}>
+       <div><div className={s.mono} style={{fontSize:16}}>{money(String(acceptedTotals[t]),t)}</div><div className={s.via}>to {n} payee{n===1?'':'s'} in {t}</div></div>
+       <button className={`${s.btn} ${s.btnDark}`} disabled={!!paying} onClick={()=>payToken(t)}>{paying===t?'Paying...':`Pay ${t}`}</button>
+      </div>);})}
+    </>:<p className={s.hint} style={{marginTop:8}}>Accept submissions above to include them in the payout.</p>}
    </div>
    <div style={{height:40}}/>
   </div>
