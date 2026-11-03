@@ -6,7 +6,15 @@ import { ethers } from 'ethers';
 import { getToken } from '../celo/tokens';
 import { getMerchant } from '../services/merchantService';
 import { CELO_TOKENS, formatTokenAmount } from '../celo/tokens';
+import { sendInvoiceEmail } from '../services/email';
 import { PrismaClient } from '@prisma/client';
+
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+function normalizeTelegramHandle(value?: string): string | undefined {
+  if (!value) return undefined;
+  const h = value.trim().replace(/^@+/, '').toLowerCase();
+  return /^[a-z0-9_]{3,64}$/.test(h) ? h : undefined;
+}
 
 const prisma = new PrismaClient();
 export const router = Router();
@@ -27,7 +35,7 @@ const tools = [
     type: 'function',
     function: {
       name: 'create_invoice',
-      description: 'Create a CeloDesk payment invoice for the authenticated merchant. Use this when the merchant explicitly asks to create an invoice AND the payment token is known. Never create an invoice without a client name, amount, and explicit token. If the amount is described only as dollars/$/USD and no token is named, ask which supported token the merchant wants: USDm, USDC, or USDT. For a local LatAm currency (Brazilian real, Argentine peso, Mexican peso, Colombian peso, Chilean peso, Peruvian sol) use the matching Ripio wFIAT token (wBRL, wARS, wMXN, wCOP, wCLP, wPEN). Do not silently choose a default token for an ambiguous amount.',
+      description: 'Create a CeloDesk payment invoice for the authenticated merchant AND deliver it to the client. Use this when the merchant explicitly asks to create an invoice AND the payment token is known. Never create an invoice without a client name, amount, and explicit token. Always ask for the client email first so CeloDesk can email the invoice straight to them (the merchant does not forward anything). A Telegram @username is optional. If the amount is described only as dollars/$/USD and no token is named, ask which supported token the merchant wants: USDm, USDC, or USDT. For a local LatAm currency (Brazilian real, Argentine peso, Mexican peso, Colombian peso, Chilean peso, Peruvian sol) use the matching Ripio wFIAT token (wBRL, wARS, wMXN, wCOP, wCLP, wPEN). Do not silently choose a default token for an ambiguous amount.',
       parameters: {
         type: 'object',
         properties: {
@@ -35,7 +43,8 @@ const tools = [
           amount: { type: 'string', description: 'Invoice amount as a decimal string, e.g. 405 or 150.50.' },
           tokenSymbol: { type: 'string', enum: SUPPORTED_TOKENS, description: 'Payment token. Must be explicitly known before creating an invoice.' },
           description: { type: 'string', description: 'What the invoice is for.' },
-          clientContact: { type: 'string', description: 'Optional client email or contact.' },
+          clientEmail: { type: 'string', description: "The client's email address. CeloDesk emails the invoice to this address. Ask for it if the merchant has not given it." },
+          clientTelegram: { type: 'string', description: "Optional client Telegram @username, e.g. @joana. Used to also deliver on Telegram when the client already uses the CeloDesk bot." },
           dueDate: { type: 'string', description: 'Optional ISO due date.' },
         },
         required: ['clientName', 'amount', 'tokenSymbol'],
@@ -163,18 +172,69 @@ async function executeTool(name: string, rawArgs: unknown, merchantId: string) {
       const merchant = await getMerchant(merchantId);
       const tokenSymbol = normalizeToken(args.tokenSymbol);
       if (!tokenSymbol || !SUPPORTED_TOKENS.includes(tokenSymbol)) throw new Error('Please choose a supported payment token before creating the invoice.');
+      const rawEmail = args.clientEmail ? String(args.clientEmail).trim() : '';
+      const clientEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail) ? rawEmail : undefined;
+      const clientTelegram = normalizeTelegramHandle(args.clientTelegram);
+
+      // Auto-DM reuse: if this merchant has emailed/sent this same @username
+      // before and the client opened it in the bot, reuse that chat so the bot
+      // can deliver straight to them this time (no forwarding).
+      let knownChatId: string | null = null;
+      if (clientTelegram) {
+        const prior = await prisma.invoice.findFirst({
+          where: { merchantId, clientTelegram, clientTelegramChatId: { not: null } },
+          orderBy: { createdAt: 'desc' },
+          select: { clientTelegramChatId: true },
+        });
+        knownChatId = prior?.clientTelegramChatId ?? null;
+      }
+
       const invoice = await createInvoice({
         merchantId,
         clientName,
         amount,
         tokenSymbol,
         description: String(args.description ?? '').trim() || 'Payment request',
-        clientContact: args.clientContact ? String(args.clientContact).trim() : undefined,
+        clientEmail,
+        clientTelegram: clientTelegram ? `@${clientTelegram}` : undefined,
+        deliverEmail: !!clientEmail,
+        deliverTelegram: !!clientTelegram,
         dueDate: args.dueDate ? String(args.dueDate) : undefined,
       });
+      const publicUrl = `${FRONTEND_URL}/invoice/${invoice.publicSlug}`;
+
+      // Carry a known chat onto the new invoice so reminders/push can reach it.
+      if (knownChatId) {
+        await prisma.invoice.update({ where: { id: invoice.id }, data: { clientTelegramChatId: knownChatId } }).catch(() => {});
+      }
+
+      // Deliver the invoice by email (same path the website uses).
+      let emailResult: { ok: boolean; skipped?: boolean; error?: string } | null = null;
+      if (clientEmail) {
+        emailResult = await sendInvoiceEmail({
+          merchantName: merchant.profile?.businessName || 'A CeloDesk merchant',
+          clientName,
+          clientEmail,
+          amount: formatTokenAmount(invoice.tokenSymbol, invoice.amount.toString()),
+          tokenSymbol: invoice.tokenSymbol,
+          description: invoice.description,
+          dueDate: invoice.dueDate ?? null,
+          payUrl: publicUrl,
+          recurring: false,
+        }).catch((err: any) => ({ ok: false, error: err?.message || 'Email failed.' }));
+      }
+
       return {
         action: 'invoice_created',
-        invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), amountDisplay: formatTokenAmount(invoice.tokenSymbol, invoice.amount.toString()), tokenSymbol: invoice.tokenSymbol, description: invoice.description, status: invoice.status, publicUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoice/${invoice.publicSlug}`, paymentQrValue: `ethereum:${invoice.tokenAddress}@${invoice.chainId}/transfer?address=${invoice.receivingWallet}&uint256=${ethers.parseUnits(invoice.amount.toString(), getToken(invoice.tokenSymbol).decimals).toString()}` },
+        invoice: { id: invoice.id, publicSlug: invoice.publicSlug, clientName: invoice.clientName, amount: invoice.amount.toString(), amountDisplay: formatTokenAmount(invoice.tokenSymbol, invoice.amount.toString()), tokenSymbol: invoice.tokenSymbol, description: invoice.description, status: invoice.status, publicUrl, paymentQrValue: `ethereum:${invoice.tokenAddress}@${invoice.chainId}/transfer?address=${invoice.receivingWallet}&uint256=${ethers.parseUnits(invoice.amount.toString(), getToken(invoice.tokenSymbol).decimals).toString()}` },
+        delivery: {
+          email: clientEmail || null,
+          emailed: !!(emailResult && emailResult.ok),
+          emailError: emailResult && !emailResult.ok ? (emailResult.skipped ? 'not_configured' : emailResult.error || 'failed') : null,
+          clientTelegram: clientTelegram ? `@${clientTelegram}` : null,
+          telegramChatId: knownChatId,
+          telegramDeepLinkSlug: `inv_${invoice.publicSlug}`,
+        },
       };
     }
     case 'list_outstanding_invoices': {
@@ -241,6 +301,8 @@ const SYSTEM = `You are CeloDesk AI, a concise business payment assistant for th
 Rules:
 - Use tools for any question about the merchant's actual invoices, payments, profile, balances or activity. Never invent financial data.
 - Use create_invoice only when the user explicitly asks to create an invoice. Do not create one merely because they are discussing an invoice.
+- Before creating an invoice, make sure you have the client's email so CeloDesk can email it straight to them. If the email is missing, ask for it (one short question). A Telegram @username is optional and only helps when the client already uses the CeloDesk bot.
+- After create_invoice succeeds CeloDesk has already delivered the invoice. Tell the merchant it was emailed to the client (use the email from the result). Never tell the merchant to forward, copy or share a link themselves. If the delivery result shows the email was not sent, say so plainly and suggest checking the address.
 - Never create an invoice until a payment token is explicitly known. If the user gives an amount in dollars, $, or USD but does not name a specific token, ask which token they want: USDm, USDC, or USDT. Do not infer USDm from a dollar amount. NGNm should only be used when explicitly selected/named.
 - CeloDesk supports LatAm local currencies via Ripio wFIAT. When the user asks to invoice in a local currency, use the matching token: Brazilian real -> wBRL, Argentine peso -> wARS, Mexican peso -> wMXN, Colombian peso -> wCOP, Chilean peso -> wCLP, Peruvian sol -> wPEN. Each local currency maps to exactly one token, so "500 reais" or "invoice 20000 pesos argentinos" unambiguously means wBRL / wARS.
 - Understand normal token names including USDT, USD₮, Tether, USDC, USD Coin, USDm, Mento Dollar, NGNm, Mento Naira, and the Ripio wFIAT names (wBRL/real/reais, wARS/peso argentino, wMXN/peso mexicano, wCOP/peso colombiano, wCLP/peso chileno, wPEN/sol).

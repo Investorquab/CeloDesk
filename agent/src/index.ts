@@ -12,7 +12,7 @@ const botToken = process.env.TELEGRAM_BOT_TOKEN;
 if (!botToken) throw new Error('Missing TELEGRAM_BOT_TOKEN in .env');
 
 // Where the public pay page lives, for the client "Pay in wallet" button.
-const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://celo-desk.vercel.app').replace(/\/$/, '');
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://celodesk.xyz').replace(/\/$/, '');
 
 const bot = new Telegraf(botToken);
 
@@ -131,6 +131,29 @@ async function requireSession(ctx: any): Promise<Session | null> {
 async function sendInvoiceArtifact(ctx: any, artifact: any) {
   const invoice = artifact?.invoice;
   if (!invoice?.publicUrl) return;
+  const delivery = artifact?.delivery || {};
+
+  // 1. Deliver straight to the client on Telegram when we already know their
+  // chat (they have used the CeloDesk bot before). No forwarding needed.
+  let dmSent = false;
+  if (delivery.telegramChatId) {
+    try {
+      const fresh = await getInvoiceBySlug(invoice.publicSlug);
+      const view = clientInvoiceView(fresh, invoice.publicSlug);
+      await bot.telegram.sendMessage(delivery.telegramChatId, view.text, { parse_mode: 'HTML', ...view.keyboard });
+      dmSent = true;
+    } catch (err) {
+      console.error('Telegram client DM failed:', err);
+    }
+  }
+
+  // 2. Confirm delivery to the merchant, with the invoice card.
+  const summary: string[] = [];
+  if (delivery.emailed && delivery.email) summary.push(`📧 Emailed to ${telegramHtml(String(delivery.email))}`);
+  else if (delivery.email && delivery.emailError) summary.push(`⚠️ Could not email ${telegramHtml(String(delivery.email))} (${delivery.emailError === 'not_configured' ? 'email not set up' : 'check the address'})`);
+  if (dmSent && delivery.clientTelegram) summary.push(`✈️ Sent to ${telegramHtml(String(delivery.clientTelegram))} on Telegram`);
+  const caption = summary.length ? summary.join('\n') : 'Invoice created';
+
   try {
     const image = await renderTelegramInvoiceCard({
       clientName: invoice.clientName,
@@ -142,12 +165,25 @@ async function sendInvoiceArtifact(ctx: any, artifact: any) {
       paymentQrValue: invoice.paymentQrValue || invoice.publicUrl,
     });
     await ctx.replyWithPhoto(Input.fromBuffer(image), {
-      caption: '🧾 CeloDesk invoice · ready to share',
+      caption,
+      parse_mode: 'HTML',
       ...Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]),
     });
   } catch (err) {
     console.error('Telegram invoice card render failed:', err);
-    await ctx.reply('✅ <b>Your invoice is ready</b>:', { parse_mode: 'HTML', ...Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]) });
+    await ctx.reply(`✅ <b>Invoice created</b>\n${caption}`, { parse_mode: 'HTML', ...Markup.inlineKeyboard([[Markup.button.url('🔗 Open invoice', invoice.publicUrl)]]) });
+  }
+
+  // 3. A Telegram @username was given but the client has not used the bot yet,
+  // so we cannot message them directly (Telegram bots cannot cold-DM). Offer a
+  // one-tap link the merchant can pass on; email is still the real delivery.
+  if (delivery.clientTelegram && !dmSent && delivery.telegramDeepLinkSlug) {
+    const botUser = ctx.botInfo?.username || 'celoagentbot';
+    const deepLink = `https://t.me/${botUser}?start=${encodeURIComponent(delivery.telegramDeepLinkSlug)}`;
+    await ctx.reply(
+      `To reach ${telegramHtml(String(delivery.clientTelegram))} on Telegram, send them this one-tap link (they open it in the bot, then pay). They have not used CeloDesk on Telegram yet, so the bot cannot message them first.`,
+      { parse_mode: 'HTML', ...Markup.inlineKeyboard([[Markup.button.url('Open invoice for client', deepLink)]]) },
+    );
   }
 }
 
@@ -268,7 +304,7 @@ async function askAgent(ctx: any, text: string) {
     const artifacts = result.artifacts ?? [];
     const invoiceArtifact = artifacts.find((a: any) => a?.action === 'invoice_created');
     const recentInvoicesArtifact = artifacts.find((a: any) => a?.action === 'recent_activity');
-    const displayArtifact = [...artifacts].reverse().find((a: any) => ['invoice_status', 'invoice_detail', 'outstanding', 'payment_summary', 'help', 'invoice_created'].includes(a?.action));
+    const displayArtifact = [...artifacts].reverse().find((a: any) => ['invoice_status', 'invoice_detail', 'outstanding', 'payment_summary', 'help'].includes(a?.action));
 
     if (recentInvoicesArtifact) {
       await sendRecentInvoices(ctx, recentInvoicesArtifact);
