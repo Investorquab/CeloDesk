@@ -3,6 +3,9 @@
 > **The stablecoin payment desk that works like an agent.**
 > Ask for payment in plain language. Get paid directly on Celo. Know it's paid — because it was verified on-chain.
 
+### 🎥 Watch the demo film → **[youtube.com/watch?v=iCGmHKFWh6Y](https://www.youtube.com/watch?v=iCGmHKFWh6Y)**
+A ~3-minute walkthrough of CeloDesk in action: AI invoicing, on-chain verification, local-currency (wFIAT) settlement, gasless USA₮ over x402, and Batch Pay.
+
 CeloDesk is an AI-native payments agent for freelancers, small businesses and creators on **Celo**. A merchant works with CeloDesk from **the web, Telegram, or any MCP client (e.g. Claude)** to create an invoice, share a pay-by-link page, receive a direct wallet payment, **verify that payment on-chain**, and track who still owes them — in US-dollar stablecoins, in **Ripio wFIAT local currencies** (wBRL, wARS…), or over the **x402 / USA₮** corridor. It also pays many people at once with **Batch Pay**, a single on-chain payout to independent wallets.
 
 CeloDesk is non-custodial: it never holds a customer's funds or keys.
