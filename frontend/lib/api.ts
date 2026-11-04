@@ -52,6 +52,8 @@ export const api={
  submitCollectionItem:(slug:string,data:{payeeName:string;payeeWallet:string;tokenSymbol:string;amount:string;note?:string;payeeEmail?:string})=>request<{ok:boolean;id:string}>(`/api/collections/by-slug/${encodeURIComponent(slug)}/items`,{method:'POST',body:JSON.stringify(data)}),
  collectionPayIntent:(id:string,tokenSymbol:string,payerAddress:string)=>request<CollectionPayIntent>(`/api/collections/${encodeURIComponent(id)}/pay-intent`,{method:'POST',body:JSON.stringify({tokenSymbol,payerAddress})}),
  collectionPayConfirm:(id:string,tokenSymbol:string,txHash:string)=>request<Collection>(`/api/collections/${encodeURIComponent(id)}/pay/confirm`,{method:'POST',body:JSON.stringify({tokenSymbol,txHash})}),
+ getX402Requirements:(id:string)=>request<{x402Version:number;accepts:any[]}>(`/api/x402/invoices/${encodeURIComponent(id)}/requirements`),
+ payX402:(id:string,paymentPayload:any)=>request<{settled:boolean;invoiceStatus?:string;transaction?:string;payer?:string;network?:string;explorerUrl?:string;reason?:string}>(`/api/x402/invoices/${encodeURIComponent(id)}/pay`,{method:'POST',body:JSON.stringify({paymentPayload})}),
 };
 // Local-currency display for Celo stablecoins. Mirrors the backend token
 // registry (src/celo/tokens.ts) so money() can stay synchronous. wFIAT
