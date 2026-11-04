@@ -12,7 +12,7 @@ import s from './AppShell.module.css';
 
 function extractSlug(publicUrl?:string){
  if(!publicUrl)return '';
- try{const u=new URL(publicUrl,typeof window!=='undefined'?window.location.origin:'http://localhost');return u.searchParams.get('slug')||''}catch{return publicUrl.match(/[?&]slug=([^&]+)/)?.[1]||''}
+ try{const u=new URL(publicUrl,typeof window!=='undefined'?window.location.origin:'http://localhost');const q=u.searchParams.get('slug');if(q)return q;const m=u.pathname.match(/\/invoice\/([^/?#]+)/);return m?decodeURIComponent(m[1]):''}catch{return publicUrl.match(/\/invoice\/([^/?#]+)/)?.[1]||publicUrl.match(/[?&]slug=([^&]+)/)?.[1]||''}
 }
 function buildInvoiceUrl(publicUrl:string,id:string){const slug=extractSlug(publicUrl);return `${window.location.origin}/invoice/${encodeURIComponent(slug||id)}`}
 const RECUR_LABEL:Record<string,string>={WEEKLY:'Weekly',BIWEEKLY:'Every 2 weeks',MONTHLY:'Monthly'};
