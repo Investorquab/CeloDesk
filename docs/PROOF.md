@@ -55,9 +55,25 @@ transfer, and CeloDesk verifies it on-chain before marking the invoice PAID.
 - **Explorer:** https://celoscan.io/tx/0x28f6854b90abff0aba1760b03a1bc6012e1f0b1663c81ced6eeb9d7e433b11ed
 - **Tag verified:** `npm run verify-tag -- 0x28f6854b…` decodes `celo_3fce81a170fc`.
 
-## 3. Track 2 — USA₮ over x402
-_Pending: a real USA₮ settlement via the x402 facilitator (Stage 8). Record the
-PayTo wallet (merchant receiving wallet) — x402 settlements carry no attribution tag._
+## 3. Track 2 — USA₮ over x402 (2026-11-04)
+
+A real USA₮ invoice (0.05 USA₮) settled through **Celo's x402 facilitator** on
+mainnet. The payer signed an EIP-3009 `transferWithAuthorization` in their wallet
+on the CeloDesk `/x402` page; the facilitator submitted it on-chain and paid the
+gas, moving USA₮ directly payer → merchant. Gasless for the payer.
+
+- **PayTo wallet (merchant — recorded for this lane):** `0x00d1E86040d88397F4eB187c38dC527F6659e486`
+- **Payer:** `0x4dcc18870f356a58902EE772df24e2a06eD923ec`
+- **Facilitator submitter (paid the gas):** `0x0d74d5cEfd2E7f24e623330eBe3d8d4cB45FFb48`
+- **Amount:** 0.05 USA₮
+- **Token:** USA₮ `0xD2ab3C9A02DBBAB236BfEC45D1d755DF4267F771` (6 decimals)
+- **Method:** `transferWithAuthorization` (EIP-3009, selector `0xe3ee160e`) — submitted by the facilitator, not the payer
+- **Tx hash:** `0xae3582ad04b5195e36efe68029f25fc14a89f7fc4d553bba787528f28fedc767`
+- **Block:** 81877512 · **Status:** success
+- **Explorer:** https://celoscan.io/tx/0xae3582ad04b5195e36efe68029f25fc14a89f7fc4d553bba787528f28fedc767
+- **Attribution:** x402 settlements through the hosted facilitator carry no tag;
+  the merchant PayTo wallet above is what the organisers record for this lane.
+  CeloDesk's tagged agent-wallet requirement is satisfied separately (see §1).
 
 ## 4. Batch Pay — one-transaction payout to independent parties (2026-11-03)
 
