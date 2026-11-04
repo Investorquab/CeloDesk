@@ -29,8 +29,31 @@ Agent wallet: `0x00d1E86040d88397F4eB187c38dC527F6659e486`.
 - **Tag verified:** `npm run verify-tag -- 0x1c6187465f629089cfda100d07ce5aeeeaf44aa097b6b280eb6b912c374173f4`
   decodes `celo_3fce81a170fc`. `tokenURI(9799)` now resolves to the celodesk.xyz card.
 
-## 2. Track 1 — Ripio wFIAT payment
-_Pending: a real tagged wFIAT invoice payment on mainnet (Stage 8)._
+## 2. Track 1 — Ripio wFIAT payment (2026-11-04)
+
+Real wFIAT invoices created in CeloDesk and paid on Celo mainnet from a separate
+wallet (the payer, not the merchant/agent wallet). Each payment goes through
+CeloDesk's checkout, which appends the attribution data suffix to the ERC20
+transfer, and CeloDesk verifies it on-chain before marking the invoice PAID.
+
+- **Merchant (receives):** `0x00d1E86040d88397F4eB187c38dC527F6659e486`
+- **Payer:** `0x4dcc18870f356a58902EE772df24e2a06eD923ec`
+
+### wBRL
+- **Amount:** 2.00 wBRL (R$ 2,00)
+- **Token:** wBRL `0xD76f5Faf6888e24D9F04Bf92a0c8B921FE4390e0` (18 decimals)
+- **Tx hash:** `0xedd5fa93d67410e036f309ae26c8f77f7b77de905639a4916dfa7e71444a3615`
+- **Block:** 81874659 · **Status:** success
+- **Explorer:** https://celoscan.io/tx/0xedd5fa93d67410e036f309ae26c8f77f7b77de905639a4916dfa7e71444a3615
+- **Tag verified:** `npm run verify-tag -- 0xedd5fa93…` decodes `celo_3fce81a170fc`.
+
+### wARS
+- **Amount:** 200 wARS ($ 200)
+- **Token:** wARS `0x0DC4F92879B7670e5f4e4e6e3c801D229129D90D` (18 decimals)
+- **Tx hash:** `0x28f6854b90abff0aba1760b03a1bc6012e1f0b1663c81ced6eeb9d7e433b11ed`
+- **Block:** 81874594 · **Status:** success
+- **Explorer:** https://celoscan.io/tx/0x28f6854b90abff0aba1760b03a1bc6012e1f0b1663c81ced6eeb9d7e433b11ed
+- **Tag verified:** `npm run verify-tag -- 0x28f6854b…` decodes `celo_3fce81a170fc`.
 
 ## 3. Track 2 — USA₮ over x402
 _Pending: a real USA₮ settlement via the x402 facilitator (Stage 8). Record the
