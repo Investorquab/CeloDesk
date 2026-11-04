@@ -244,10 +244,15 @@ export default function CheckoutClient({slug,returnTo}:{slug:string;returnTo?:st
          {payState==='failed'&&<div className={`${styles.state} ${styles.stateFailed}`}><Alert size={18}/><div><strong>Payment was not completed</strong><div>{reason}</div></div></div>}
 
          <div className={styles.wlabel}>Pay with</div>
-         <button className={`${styles.wrow} ${styles.wrowRec}`} onClick={pay} disabled={busy}>
+         {inv.tokenSymbol==='USAT'&&<a className={`${styles.wrow} ${styles.wrowRec}`} href={`/x402/${inv.id}`}>
+           <span className={styles.wIcon}><Wallet size={18}/></span>
+           <span>Pay over x402<span className={styles.wSub}>Gasless USA&#8366; - sign once, no CELO needed</span></span>
+           <span className={styles.wTag}>Recommended</span>
+         </a>}
+         <button className={`${styles.wrow} ${inv.tokenSymbol==='USAT'?'':styles.wrowRec}`} onClick={pay} disabled={busy}>
            <span className={styles.wIcon}><span className={styles.miniGlyph}/></span>
            <span>MiniPay<span className={styles.wSub}>Fast, gas handled for you</span></span>
-           <span className={styles.wTag}>{isMiniPay?'Detected':'Recommended'}</span>
+           <span className={styles.wTag}>{isMiniPay?'Detected':(inv.tokenSymbol==='USAT'?'Direct':'Recommended')}</span>
          </button>
          <button className={styles.wrow} onClick={pay} disabled={busy}>
            <span className={styles.wIcon}><Wallet size={18}/></span>
