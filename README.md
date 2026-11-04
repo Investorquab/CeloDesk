@@ -92,9 +92,11 @@ Addresses were taken from the [Celo stablecoin contracts reference](https://docs
 
 ## Track 2 — Open corridors with USA₮ over x402
 
-**Who it serves.** Cross-border settlement between independent parties — including machine-to-machine and agent-to-agent payments — where a US-dollar settlement asset is the right unit of account and gas should not be the payer's problem.
+**Who it serves.** A freelancer or small business settling **cross-border in US dollars** with a client or agent abroad — and increasingly an **autonomous agent paying another agent** for a service. They need a dollar that counterparties and their banks will trust, settlement that clears in seconds, and a payer experience that doesn't require holding a gas token.
 
-**Why USA₮ and x402.** **USA₮** (Tether America USD) is a US-regulated dollar stablecoin on Celo, settled through the hosted **x402 facilitator** using the gasless **EIP-3009 `transferWithAuthorization`** scheme: the payer signs an authorization off-chain, the facilitator submits it and pays gas, funds move payer→merchant directly, and nobody custodies them. The payer needs no CELO.
+**Why USA₮ specifically.** For a cross-border payment, *which* dollar matters. **USA₮** (Tether America USD) is a **US-regulated** stablecoin issued by **Anchorage Digital Bank, N.A.**, built to GENIUS Act standards — so a business receiving it, and that business's bank, can treat it as a compliant dollar rather than an offshore token. For the user CeloDesk serves, that regulatory standing is the difference between a stablecoin they can book and one they can't. Celo is the first network after Ethereum to host USA₮ natively, so it settles on the same sub-cent rails as the rest of CeloDesk.
+
+**Why x402.** CeloDesk settles USA₮ through Celo's hosted **x402 facilitator** using the gasless **EIP-3009 `transferWithAuthorization`** scheme: the payer signs an authorization off-chain, the facilitator submits it on-chain and **pays the gas**, funds move payer→merchant directly, and nobody custodies them. The payer needs **no CELO** — which is exactly right for a client abroad or an agent that only holds dollars. This is live and proven on mainnet with **repeat settlements from an independent payer** (see [docs/PROOF.md](docs/PROOF.md) §3).
 
 **What CeloDesk does.** A merchant issues a USA₮ invoice; a paying agent settles it over x402:
 

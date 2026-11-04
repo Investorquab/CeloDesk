@@ -71,6 +71,14 @@ gas, moving USA₮ directly payer → merchant. Gasless for the payer.
 - **Tx hash:** `0xae3582ad04b5195e36efe68029f25fc14a89f7fc4d553bba787528f28fedc767`
 - **Block:** 81877512 · **Status:** success
 - **Explorer:** https://celoscan.io/tx/0xae3582ad04b5195e36efe68029f25fc14a89f7fc4d553bba787528f28fedc767
+
+**Repeat flow (same counterparty).** A second USA₮ invoice (0.05 USA₮) was settled
+over x402 by the same payer, through the same facilitator — demonstrating repeat
+payments, not a one-off:
+- **Tx hash:** `0x5828e9d5c23c4f09f7881b4b163574d3c4e208d78f41f96d72a670235089481d`
+- **Block:** 81879004 · **Status:** success · `transferWithAuthorization`, 0.05 USA₮, `0x4dcc…` → `0x00d1…`
+- **Explorer:** https://celoscan.io/tx/0x5828e9d5c23c4f09f7881b4b163574d3c4e208d78f41f96d72a670235089481d
+
 - **Attribution:** x402 settlements through the hosted facilitator carry no tag;
   the merchant PayTo wallet above is what the organisers record for this lane.
   CeloDesk's tagged agent-wallet requirement is satisfied separately (see §1).
