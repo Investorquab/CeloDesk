@@ -22,6 +22,10 @@ export default function DashboardClient({merchantId}:{merchantId:string}){
  useEffect(()=>{const h=new Date().getHours();setGreeting(h<12?'Good morning':h<18?'Good afternoon':'Good evening')},[]);
  const refreshDashboard=useCallback(async()=>{try{const [a,b,c]=await Promise.all([api.getMerchant(merchantId),api.getSummary(merchantId),api.listInvoices(merchantId)]);setM(a);setSum(b);setInv(c.sort((x,y)=>+new Date(y.createdAt)-+new Date(x.createdAt)));setErr('')}catch(e:any){setErr(userFacingError(e,'Could not refresh the account.'))}},[merchantId]);
  useEffect(()=>{void refreshDashboard()},[refreshDashboard]);
+ // When the session changes (e.g. a wallet is linked to a Google account and
+ // its past invoices are merged in), refetch so the pulled-in history shows
+ // without a manual page reload.
+ useEffect(()=>{const onSession=()=>{void refreshDashboard()};window.addEventListener('celodesk-session',onSession);return()=>window.removeEventListener('celodesk-session',onSession)},[refreshDashboard]);
 
  const sessionExpired=err===ACCOUNT_SESSION_ERROR;
  const name=m?.profile?.businessName||'Your business';
