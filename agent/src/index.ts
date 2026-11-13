@@ -7,6 +7,10 @@ import { Input } from 'telegraf';
 import { linkTelegramWallet, getMerchantByTelegramId, getInvoiceBySlug, setInvoiceDecision, setClientTelegramChat, getDueTelegramReminders, markTelegramReminderSent, type TelegramReminder } from './backendClient';
 import { handleMessage } from './agent';
 import { renderTelegramInvoiceCard } from './invoiceCard';
+import { installProcessGuards } from './observability';
+
+// Keep a stray rejection or exception from silently killing the bot.
+installProcessGuards('agent');
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 if (!botToken) throw new Error('Missing TELEGRAM_BOT_TOKEN in .env');

@@ -14,6 +14,12 @@ import { router as payLinkRouter } from './routes/payLinks';
 import { router as collectionRouter } from './routes/collections';
 import { assertAttributionIntegrity, HACKATHON_ATTRIBUTION_TAG } from './services/attribution';
 import { startRecurrenceScheduler } from './services/recurrence';
+import { installProcessGuards, reportError } from './observability';
+
+// Catch stray promise rejections and uncaught exceptions before they can
+// take the process down without a trace. Installed first so it covers
+// startup too.
+installProcessGuards('backend');
 
 // Refuse to start if the attribution tag is wrong or no longer encodes to
 // the Loops-issued data suffix. An untagged/mis-tagged deploy would make
@@ -50,6 +56,26 @@ app.use('/api/pay-links', payLinkRouter);
 app.use('/api/collections', collectionRouter);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// Anything that did not match a route above.
+app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
+
+// Last-resort error handler: log every error that reaches it (including any
+// a route forwarded via next(err)) and return a safe message. Without this,
+// a thrown route error falls through to Express's default and is never
+// recorded. Must be the final `app.use`, and must keep all four arguments.
+app.use(
+  (
+    err: unknown,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) => {
+    reportError('express', err, { path: req.path, method: req.method });
+    if (res.headersSent) return next(err);
+    res.status(500).json({ error: 'Something went wrong on our end.' });
+  },
+);
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 app.listen(port, () => {
